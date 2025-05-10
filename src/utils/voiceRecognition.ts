@@ -1,4 +1,3 @@
-
 // Voice recognition utility for "Hey Trade" wake word detection
 
 // Browser compatibility check - support Firefox, Safari, Chrome and Edge
@@ -67,6 +66,8 @@ const requestMicrophonePermission = async (): Promise<boolean> => {
 
 // Enhanced wake word detection with improved sensitivity
 const detectWakeWord = (transcript: string): boolean => {
+  if (!transcript) return false;
+  
   const lowerTranscript = transcript.toLowerCase().trim();
   console.log("Checking for wake word in:", lowerTranscript);
   
@@ -145,7 +146,7 @@ export const initVoiceRecognition = (
     
     // Variables to track state
     let isListeningForCommand = false;
-    let commandTimeout: NodeJS.Timeout | null = null;
+    let commandTimeout: ReturnType<typeof setTimeout> | null = null; // Fixed NodeJS.Timeout to work in browser
     let lastTranscript = '';
     let fullCommand = ''; // Store the complete command
     let hasErrored = false;
@@ -156,20 +157,30 @@ export const initVoiceRecognition = (
     
     // Handle results with improved wake word detection and command accumulation
     recognition.onresult = (event: any) => {
-      console.log("Speech recognition result received", { 
-        results: event.results.length, 
-        isListeningForCommand
-      });
-      
-      const latestResult = event.results[event.results.length - 1];
-      const transcript = latestResult[0].transcript;
-      
       // Don't process if we're not supposed to be listening
       if (!isListeningActive) {
         console.log("Ignoring speech result - listening is inactive");
         return;
       }
-
+      
+      console.log("Speech recognition result received", { 
+        results: event.results.length, 
+        isListeningForCommand
+      });
+      
+      if (!event.results || event.results.length === 0) {
+        console.log("No results in speech event");
+        return;
+      }
+      
+      const latestResult = event.results[event.results.length - 1];
+      if (!latestResult || latestResult.length === 0) {
+        console.log("Invalid result format");
+        return;
+      }
+      
+      const transcript = latestResult[0].transcript || "";
+      
       console.log("Speech recognized:", transcript, "isFinal:", latestResult.isFinal);
       
       // Wake word detection mode
@@ -339,21 +350,21 @@ export const initVoiceRecognition = (
       // Normal restart with small delay to prevent rapid cycling
       if (isListeningActive) {
         recognitionRestartCount++;
-        try {
-          setTimeout(() => {
-            if (isListeningActive) {
+        setTimeout(() => {
+          if (isListeningActive) {
+            try {
               recognition.start();
               console.log("Recognition restarted automatically");
+            } catch (error) {
+              console.error("Error restarting recognition:", error);
+              hasErrored = true;
+              if (isProcessingSpeech) {
+                isProcessingSpeech = false;
+                onListeningEnd();
+              }
             }
-          }, 300); // Small delay before restarting
-        } catch (error) {
-          console.error("Error restarting recognition:", error);
-          hasErrored = true;
-          if (isProcessingSpeech) {
-            isProcessingSpeech = false;
-            onListeningEnd();
           }
-        }
+        }, 300); // Small delay before restarting
       }
     };
     
