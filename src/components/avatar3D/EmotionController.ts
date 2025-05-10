@@ -1,19 +1,11 @@
 
 // Controller for managing avatar emotions and expressions
 
-export type AvatarEmotion = "neutral" | "confident" | "thinking" | "happy" | "surprised" | "concerned";
-export type AvatarStatus = "idle" | "listening" | "speaking";
+import { AvatarEmotion, AvatarStatus, EmotionConfig, ExpressionBlendshape } from './types/avatarTypes';
+import { generateBlendshapes } from './utils/expressionGenerator';
+import { processText, handleBusinessEvent } from './utils/textProcessor';
 
-interface EmotionConfig {
-  intensity: number;
-  duration: number;
-  blendDuration: number;
-}
-
-interface ExpressionBlendshape {
-  name: string;
-  value: number;
-}
+export { AvatarEmotion, AvatarStatus } from './types/avatarTypes';
 
 export class EmotionController {
   private currentEmotion: AvatarEmotion = "neutral";
@@ -43,7 +35,7 @@ export class EmotionController {
     this.emotionIntensity = finalConfig.intensity;
     
     // Generate appropriate blendshapes based on the emotion
-    this.generateBlendshapes(emotion, finalConfig.intensity);
+    this.expressionBlendshapes = generateBlendshapes(emotion, finalConfig.intensity);
     
     // If it's a temporary emotion with duration, schedule reset
     if (finalConfig.duration > 0) {
@@ -83,69 +75,6 @@ export class EmotionController {
   
   public getBlendshapes(): ExpressionBlendshape[] {
     return this.expressionBlendshapes;
-  }
-  
-  private generateBlendshapes(emotion: AvatarEmotion, intensity: number) {
-    // Generate blendshape values based on emotion
-    switch(emotion) {
-      case "confident":
-        this.expressionBlendshapes = [
-          { name: "eyebrows_up", value: 0.3 * intensity },
-          { name: "smile", value: 0.6 * intensity },
-          { name: "eyes_wide", value: 0.2 * intensity },
-          { name: "head_up", value: 0.4 * intensity },
-          { name: "mouth_smile", value: 0.7 * intensity },
-          { name: "mouth_width", value: 0.6 * intensity }, // Wider smile
-          { name: "cheeks_up", value: 0.5 * intensity }, // Business-like confidence
-          { name: "tie_adjustment", value: 0.2 * intensity }, // Subtle tie adjustment
-        ];
-        break;
-      case "thinking":
-        this.expressionBlendshapes = [
-          { name: "eyebrows_down", value: 0.7 * intensity },
-          { name: "eyebrows_inner_up", value: 0.5 * intensity },
-          { name: "head_tilt", value: 0.6 * intensity },
-          { name: "mouth_narrow", value: 0.4 * intensity },
-          { name: "eyes_squint", value: 0.3 * intensity },
-          { name: "mouth_pout", value: 0.2 * intensity }, // Thoughtful pout
-        ];
-        break;
-      case "happy":
-        this.expressionBlendshapes = [
-          { name: "smile_wide", value: 0.8 * intensity },
-          { name: "eyes_squint", value: 0.3 * intensity },
-          { name: "cheeks_up", value: 0.7 * intensity },
-          { name: "nose_wrinkle", value: 0.2 * intensity },
-          { name: "eyebrows_up", value: 0.4 * intensity },
-          { name: "mouth_open", value: 0.2 * intensity }, // Slightly open mouth for happy expression
-          { name: "eyes_sparkle", value: 0.6 * intensity }, // Sparkling eyes
-        ];
-        break;
-      case "surprised":
-        this.expressionBlendshapes = [
-          { name: "eyebrows_up", value: 0.9 * intensity },
-          { name: "eyes_wide", value: 0.8 * intensity },
-          { name: "mouth_open", value: 0.7 * intensity },
-          { name: "head_back", value: 0.3 * intensity },
-        ];
-        break;
-      case "concerned":
-        this.expressionBlendshapes = [
-          { name: "eyebrows_inner_up", value: 0.7 * intensity },
-          { name: "mouth_corners_down", value: 0.5 * intensity },
-          { name: "head_forward", value: 0.3 * intensity },
-          { name: "eyes_squint", value: 0.4 * intensity },
-        ];
-        break;
-      default: // neutral
-        this.expressionBlendshapes = [
-          { name: "reset", value: 1.0 },
-          { name: "blink_rate", value: 0.2 + Math.random() * 0.1 }, // Random blink rate
-          { name: "micro_movement", value: 0.2 * intensity }, // Subtle movements
-          { name: "mouth_slight_smile", value: 0.3 * intensity }, // Default friendly expression
-          { name: "business_posture", value: 1.0 }, // Professional posture
-        ];
-    }
   }
   
   // Start random micro-expressions during idle time
@@ -223,59 +152,12 @@ export class EmotionController {
   
   // Process text content to determine appropriate emotional response
   public processText(text: string) {
-    // Simple sentiment analysis to determine emotion
-    const lowerText = text.toLowerCase();
-    
-    // Check for keywords that might trigger emotions
-    if (lowerText.includes("excellent") || 
-        lowerText.includes("great") || 
-        lowerText.includes("profit") ||
-        lowerText.includes("up") && lowerText.includes("percent")) {
-      return this.setEmotion("happy", { duration: 3 });
-    }
-    
-    if (lowerText.includes("recommend") || 
-        lowerText.includes("suggest") || 
-        lowerText.includes("advise")) {
-      return this.setEmotion("confident", { duration: 3 });
-    }
-    
-    if (lowerText.includes("analyze") || 
-        lowerText.includes("consider") || 
-        lowerText.includes("think") ||
-        lowerText.includes("calculate")) {
-      return this.setEmotion("thinking", { duration: 3 });
-    }
-
-    // New emotion triggers for business context
-    if (lowerText.includes("market crash") ||
-        lowerText.includes("recession") ||
-        lowerText.includes("bear market") ||
-        lowerText.includes("downtrend")) {
-      return this.setEmotion("concerned", { duration: 3 });
-    }
-
-    if (lowerText.includes("breaking news") ||
-        lowerText.includes("unexpected") ||
-        lowerText.includes("announcement") ||
-        lowerText.includes("sudden")) {
-      return this.setEmotion("surprised", { duration: 2.5 });
-    }
-    
-    // Default - return to neutral
-    return this;
+    return processText(text, this);
   }
 
-  // New method to handle business-themed reactions
+  // Method to handle business-themed reactions
   public handleBusinessEvent(event: string, impact: 'positive' | 'neutral' | 'negative') {
-    switch(impact) {
-      case 'positive':
-        return this.setEmotion("happy", { duration: 2, intensity: 0.8 });
-      case 'negative':
-        return this.setEmotion("concerned", { duration: 2, intensity: 0.7 });
-      default:
-        return this.setEmotion("neutral", { duration: 1, intensity: 0.5 });
-    }
+    return handleBusinessEvent(event, impact, this);
   }
 }
 
