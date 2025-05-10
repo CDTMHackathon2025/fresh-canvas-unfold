@@ -1,170 +1,79 @@
-
-import { useRef, useState, useEffect } from "react";
-import Layout from "@/components/Layout";
-import ToolBar from "@/components/ToolBar";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Header from "@/components/Header";
+import BottomNavigation from "@/components/BottomNavigation";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import StoriesAndInsights from "@/components/StoriesAndInsights";
+import NewsTab from "@/components/news/NewsTab";
+import TopSearchesTab from "@/components/news/TopSearchesTab";
 
 const Index = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#000000");
-  const [brushSize, setBrushSize] = useState(5);
-  const [tool, setTool] = useState<"pen" | "eraser">("pen");
-  const { toast } = useToast();
+  const navigate = useNavigate();
+  // State for active tabs
+  const [activeMainTab, setActiveMainTab] = useState("Related News");
+  const [activeTrendingTab, setActiveTrendingTab] = useState("Related News");
   
-  // Initialize canvas
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-    
-    // Set canvas to full size
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      
-      if (context) {
-        context.lineCap = "round";
-        context.lineJoin = "round";
-      }
-    };
-    
-    resizeCanvas();
-    
-    window.addEventListener("resize", resizeCanvas);
-    
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, []);
-  
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    
-    setIsDrawing(true);
-    
-    const { offsetX, offsetY } = getCoordinates(e);
-    
-    context.beginPath();
-    context.moveTo(offsetX, offsetY);
-    
-    // For the eraser tool
-    if (tool === "eraser") {
-      context.globalCompositeOperation = "destination-out";
-    } else {
-      context.globalCompositeOperation = "source-over";
-      context.strokeStyle = color;
-    }
-    
-    context.lineWidth = brushSize;
+  // Mock data for trending
+  const trendingData = [
+    {
+      title: "Clean Energy",
+      subtitle: "Renewable stocks surge 15%. Experts predict continued growth as global demand for sustainable energy solutions increases.",
+      imageUrl: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&h=300&q=80",
+      trend: "Top searches",
+      id: "clean-energy-1"
+    },
+    {
+      title: "AI Revolution",
+      subtitle: "Tech giants lead innovation with breakthrough AI developments affecting market valuations across multiple sectors.",
+      imageUrl: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&h=300&q=80",
+      trend: "Trending",
+      id: "ai-revolution-1"
+    },
+    {
+      title: "Commodities",
+      subtitle: "Gold reaches new high amid economic uncertainty. Analysts recommend portfolio diversification with precious metals.",
+      imageUrl: "https://images.unsplash.com/photo-1589218436275-85aca5b81eaf?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&h=300&q=80",
+      trend: "Market movers",
+      id: "commodities-1"
+    },
+    {
+      title: "Healthcare Innovation",
+      subtitle: "Biotech stocks rally following breakthrough treatment announcements. Investment opportunities in medical technology sector.",
+      imageUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&h=300&q=80",
+      trend: "Sector focus",
+      id: "healthcare-1"
+    },
+    {
+      title: "Global Supply Chain",
+      subtitle: "Logistics companies benefit from supply chain restructuring. New shipping routes open potential for trade expansion.",
+      imageUrl: "https://images.unsplash.com/photo-1589293992743-f1e6a3586f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&h=300&q=80",
+      trend: "Economic impact",
+      id: "supply-chain-1"
+    },
+  ];
+
+  const handleViewDetails = (id: string) => {
+    navigate(`/details/${id}`);
   };
-  
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !canvasRef.current) return;
-    
-    const context = canvasRef.current.getContext("2d");
-    if (!context) return;
-    
-    const { offsetX, offsetY } = getCoordinates(e);
-    
-    context.lineTo(offsetX, offsetY);
-    context.stroke();
-  };
-  
-  const stopDrawing = () => {
-    if (!canvasRef.current) return;
-    
-    const context = canvasRef.current.getContext("2d");
-    if (!context) return;
-    
-    context.closePath();
-    setIsDrawing(false);
-  };
-  
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return { offsetX: 0, offsetY: 0 };
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    
-    // Handle both mouse and touch events
-    if ("touches" in e) {
-      const touch = e.touches[0];
-      return {
-        offsetX: touch.clientX - rect.left,
-        offsetY: touch.clientY - rect.top
-      };
-    } else {
-      return {
-        offsetX: e.nativeEvent.offsetX,
-        offsetY: e.nativeEvent.offsetY
-      };
-    }
-  };
-  
-  const clearCanvas = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    toast({
-      title: "Canvas cleared",
-      description: "Your canvas has been cleared successfully."
-    });
-  };
-  
-  const saveCanvas = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const dataUrl = canvas.toDataURL("image/png");
-    
-    const link = document.createElement("a");
-    link.download = "canvas-drawing.png";
-    link.href = dataUrl;
-    link.click();
-    
-    toast({
-      title: "Drawing saved",
-      description: "Your drawing has been downloaded successfully."
-    });
-  };
-  
+
   return (
-    <Layout>
-      <div className="flex flex-col h-screen w-full">
-        <ToolBar 
-          color={color}
-          setColor={setColor}
-          brushSize={brushSize}
-          setBrushSize={setBrushSize}
-          tool={tool}
-          setTool={setTool}
-          onClear={clearCanvas}
-          onSave={saveCanvas}
-        />
-        <div className="flex-1 relative bg-white border border-gray-300">
-          <canvas 
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full cursor-crosshair"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
-          />
-        </div>
-      </div>
-    </Layout>
+    <div className="pb-20 min-h-screen text-white relative z-10">
+      <Header activeTab={activeMainTab} onTabChange={setActiveMainTab} showTabs={true} />
+      
+      <main className="px-4 mt-4 pb-16">
+        <Tabs value={activeMainTab} className="w-full">
+          <TabsContent value="Related News" className="mt-0 animate-fade-in">
+            <NewsTab />
+          </TabsContent>
+          
+          <TabsContent value="Top Searches" className="mt-0 animate-fade-in">
+            <TopSearchesTab />
+          </TabsContent>
+        </Tabs>
+      </main>
+      
+      <BottomNavigation activePage="updates" />
+    </div>
   );
 };
 
