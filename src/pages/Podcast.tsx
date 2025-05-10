@@ -24,8 +24,8 @@ const Podcast = () => {
     <div className="pb-20 min-h-screen animate-fade-in">
       <Header activeTab="Financial Podcasts" onTabChange={() => {}} showTabs={false} />
       
-      {/* Added pt-16 to create space below the header */}
-      <main className="px-4 pt-16 mt-4 pb-16">
+      {/* Increased top padding from pt-16 to pt-20 to add more space */}
+      <main className="px-4 pt-20 mt-6 pb-16">
         <CategorySelector 
           activeCategory={activeCategory} 
           setActiveCategory={setActiveCategory} 

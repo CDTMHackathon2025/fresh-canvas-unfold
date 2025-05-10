@@ -4,9 +4,7 @@
 const isSpeechRecognitionSupported = (): boolean => {
   return typeof window !== 'undefined' && 
     ('SpeechRecognition' in window || 
-     'webkitSpeechRecognition' in window ||
-     'mozSpeechRecognition' in window ||
-     'msSpeechRecognition' in window);
+     'webkitSpeechRecognition' in window);
 };
 
 // Get the appropriate SpeechRecognition constructor based on browser support
@@ -18,9 +16,7 @@ const getSpeechRecognition = (): any => {
   // Try different browser implementations
   // @ts-ignore - TypeScript doesn't know about these browser-specific APIs
   return window.SpeechRecognition || 
-         window.webkitSpeechRecognition ||
-         window.mozSpeechRecognition ||
-         window.msSpeechRecognition;
+         window.webkitSpeechRecognition;
 };
 
 // Check if the browser requires permission for microphone access
