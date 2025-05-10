@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import TodayContent from "@/components/TodayContent";
+import { Wallet, User } from "lucide-react";
 
 const PortfolioPage = () => {
   // State for active tabs
@@ -92,13 +93,55 @@ const PortfolioPage = () => {
       
       {/* Added pt-16 for header spacing, keeping pb-20 for bottom nav */}
       <main className="container max-w-md mx-auto px-4 pt-16 pb-20">
-        <TodayContent
-          portfolioData={portfolioData}
-          chartData={chartData}
-          stocksData={stocksData}
-          activeStockTab={activeStockTab}
-          setActiveStockTab={setActiveStockTab}
-        />
+        <div className="space-y-6 animate-fade-in text-white">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-4">Your Portfolio</h1>
+            
+            {/* Rocket dialog content replacing PortfolioSummary */}
+            <div className="space-y-4">
+              {/* Portfolio Summary Information */}
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-center">$15,742.89</h2>
+                <p className="text-green-500 text-center font-medium mt-1">+$243.15 (1.57%) today</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-gray-800/60 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2.5 rounded-full">
+                      <Wallet className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <span>Available Cash</span>
+                  </div>
+                  <span className="font-medium">$2,850.75</span>
+                </div>
+                
+                <div className="flex justify-between items-center bg-gray-800/60 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-purple-100 p-2.5 rounded-full">
+                      <User className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <span>Total Invested</span>
+                  </div>
+                  <span className="font-medium">$12,892.14</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Keep the chart and other content from TodayContent */}
+          <div className="my-8">
+            <h2 className="text-lg font-semibold mb-3">Performance Overview</h2>
+            <TodayContent
+              portfolioData={portfolioData}
+              chartData={chartData}
+              stocksData={stocksData}
+              activeStockTab={activeStockTab}
+              setActiveStockTab={setActiveStockTab}
+              hidePortfolioSummary={true}
+            />
+          </div>
+        </div>
       </main>
       
       <BottomNavigation activePage="space" />

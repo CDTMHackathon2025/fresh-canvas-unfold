@@ -16,6 +16,7 @@ interface MessageInputProps {
   toggleVoice: () => void;
   toggleSpeech: () => void;
   isSpeechRecognitionSupported?: boolean;
+  isListening?: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -28,7 +29,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   speechEnabled,
   toggleVoice,
   toggleSpeech,
-  isSpeechRecognitionSupported = true
+  isSpeechRecognitionSupported = true,
+  isListening = false
 }) => {
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -49,6 +51,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             toggleVoice={toggleVoice}
             toggleSpeech={toggleSpeech}
             isSpeechRecognitionSupported={isSpeechRecognitionSupported}
+            isListening={isListening}
           />
           
           <Button 

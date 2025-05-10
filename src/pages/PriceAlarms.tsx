@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -347,7 +346,7 @@ const PriceAlarms = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => executeAutoTrade(alert)}
-                      className="mt-2 w-full border-gray-700 text-white hover:bg-gray-800"
+                      className="mt-2 w-full border-gray-700 text-black hover:bg-gray-800 hover:text-white"
                     >
                       {alert.tradeAction === 'buy' ? (
                         <><TrendingUp className="mr-2 h-4 w-4 text-green-400" /> Simulate Auto Buy</>

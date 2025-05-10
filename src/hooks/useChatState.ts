@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sendMessageToOpenAI } from "@/services/openaiService";
@@ -14,6 +15,9 @@ interface Message {
   content: string;
   timestamp: Date;
 }
+
+// Updated API key without the issue marker
+const API_KEY = "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";
 
 export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
   const [messages, setMessages] = useState<Message[]>([
@@ -99,8 +103,8 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     const systemPrompt = generateSystemPrompt(updatedContext);
 
     try {
-      // Use the API key directly from the OpenAI service
-      const response = await sendMessageToOpenAI(messageText, undefined, systemPrompt);
+      // Use the updated API key without the issue marker
+      const response = await sendMessageToOpenAI(messageText, API_KEY, systemPrompt);
       
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,

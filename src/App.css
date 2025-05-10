@@ -58,37 +58,3 @@
 .rocket-glow {
   animation: soft-glow 3s infinite ease-in-out;
 }
-
-/* Node pulse animation */
-@keyframes node-pulse {
-  0% {
-    box-shadow: 0 0 4px 1px var(--glow-color);
-  }
-  50% {
-    box-shadow: 0 0 12px 4px var(--glow-color);
-  }
-  100% {
-    box-shadow: 0 0 4px 1px var(--glow-color);
-  }
-}
-
-.node-pulse {
-  --glow-color: rgba(66, 153, 225, 0.6);
-  animation: node-pulse 4s infinite ease-in-out;
-}
-
-/* Randomize animation timing for nodes */
-.node-pulse:nth-child(2n) {
-  animation-delay: 0.7s;
-  animation-duration: 4.5s;
-}
-
-.node-pulse:nth-child(3n) {
-  animation-delay: 1.5s;
-  animation-duration: 5s;
-}
-
-.node-pulse:nth-child(4n) {
-  animation-delay: 0.3s;
-  animation-duration: 3.8s;
-}

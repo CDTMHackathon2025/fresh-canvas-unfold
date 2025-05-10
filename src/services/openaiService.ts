@@ -1,4 +1,3 @@
-
 interface OpenAITextResponse {
   id: string;
   object: string;
@@ -28,9 +27,6 @@ interface OpenAIErrorResponse {
   };
 }
 
-// Actual API key for OpenAI service
-const API_KEY = "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";
-
 // Fallback message when API is unavailable
 const FALLBACK_MESSAGES = [
   "I'm sorry, but I'm unable to connect to my knowledge base right now. Let me provide some general information based on what I already know.",
@@ -42,14 +38,10 @@ const FALLBACK_MESSAGES = [
 
 export const sendMessageToOpenAI = async (
   message: string, 
-  apiKey: string = API_KEY,
+  apiKey: string,
   systemPrompt?: string
 ): Promise<string> => {
-  // Check if the API key has suffix indicating quota issues
-  if (apiKey && apiKey.includes("insufficient_quota")) {
-    console.log("Using fallback message due to previous quota issues");
-    return getFallbackResponse(message);
-  }
+  // Removed the intentional error trigger check
 
   try {
     const defaultPrompt = "You are 'Hey Trade', a friendly AI assistant with visual presence. You have a virtual face that animates as you speak. You specialize in financial advice but can discuss any topic. Keep your responses concise and engaging as if having a face-to-face conversation. Use simple language and avoid very long explanations.";
@@ -79,7 +71,7 @@ export const sendMessageToOpenAI = async (
       const errorData = await response.json() as OpenAIErrorResponse;
       console.error("OpenAI API error response:", errorData);
       
-      // Mark the API key as having quota issues
+      // Check for API errors
       if (errorData.error?.type === "insufficient_quota" || 
           errorData.error?.code === "insufficient_quota") {
         console.error("OpenAI API quota exceeded. Using fallback.");

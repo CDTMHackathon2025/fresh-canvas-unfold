@@ -10,6 +10,7 @@ interface VoiceControlsProps {
   toggleVoice: () => void;
   toggleSpeech: () => void;
   isSpeechRecognitionSupported?: boolean;
+  isListening?: boolean;
 }
 
 const VoiceControls: React.FC<VoiceControlsProps> = ({ 
@@ -17,7 +18,8 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
   speechEnabled, 
   toggleVoice, 
   toggleSpeech,
-  isSpeechRecognitionSupported = true
+  isSpeechRecognitionSupported = true,
+  isListening = false
 }) => {
   return (
     <div className="flex flex-col space-y-2">
@@ -29,7 +31,9 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
                 className={`relative rounded-full p-2 h-10 w-10 ${
                   isSpeechRecognitionSupported 
                     ? isVoiceActive 
-                      ? 'bg-purple-500 hover:bg-purple-600 text-white' 
+                      ? isListening 
+                        ? 'bg-green-500 hover:bg-green-600 text-white' 
+                        : 'bg-purple-500 hover:bg-purple-600 text-white' 
                       : 'bg-gray-800/80 text-gray-400'
                     : 'bg-gray-800/60 text-gray-500 opacity-50 cursor-not-allowed'
                 }`}
@@ -38,7 +42,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
                 variant="ghost"
                 disabled={!isSpeechRecognitionSupported}
               >
-                {isVoiceActive ? <Mic className="animate-pulse" size={20} /> : <MicOff size={20} />}
+                {isVoiceActive ? <Mic className={isListening ? "animate-pulse" : ""} size={20} /> : <MicOff size={20} />}
                 {!isSpeechRecognitionSupported && (
                   <span className="absolute -top-1 -right-1 text-red-500">
                     <AlertCircle size={12} className="fill-red-500" />

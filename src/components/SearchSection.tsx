@@ -1,7 +1,7 @@
+
 import React from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AssetCard from "@/components/AssetCard";
-import SectionTitle from "@/components/SectionTitle";
 
 interface SearchSectionProps {
   searchQuery: string;
@@ -122,6 +122,54 @@ const SearchSection: React.FC<SearchSectionProps> = ({ searchQuery, favorites, o
     },
   ];
 
+  // Mock data for bonds
+  const bondsData = [
+    {
+      id: "bond-1",
+      name: "US Treasury Bond",
+      ticker: "GOVT",
+      price: 102.45,
+      change: "+0.35",
+      changePercent: "+0.34",
+      imageUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      type: "bond" as const
+    },
+    {
+      id: "bond-2",
+      name: "Corporate Bond ETF",
+      ticker: "LQD",
+      price: 108.75,
+      change: "+0.28",
+      changePercent: "+0.26",
+      imageUrl: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      type: "bond" as const
+    }
+  ];
+
+  // Mock data for derivatives
+  const derivativesData = [
+    {
+      id: "derivative-1",
+      name: "S&P 500 Futures",
+      ticker: "ES",
+      price: 5245.50,
+      change: "+23.25",
+      changePercent: "+0.45",
+      imageUrl: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      type: "derivative" as const
+    },
+    {
+      id: "derivative-2",
+      name: "VIX Futures",
+      ticker: "VX",
+      price: 14.85,
+      change: "-0.35",
+      changePercent: "-2.30",
+      imageUrl: "https://images.unsplash.com/photo-1535320903710-d993d3d77d29?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      type: "derivative" as const
+    }
+  ];
+
   // Filter data based on search query
   const filterData = (data: any[]) => {
     if (!searchQuery) return data;
@@ -135,29 +183,43 @@ const SearchSection: React.FC<SearchSectionProps> = ({ searchQuery, favorites, o
   const filteredStocks = filterData(stocksData);
   const filteredETFs = filterData(etfsData);
   const filteredCryptos = filterData(cryptoData);
+  const filteredBonds = filterData(bondsData);
+  const filteredDerivatives = filterData(derivativesData);
 
   return (
     <div>
       <Tabs defaultValue="stocks" className="w-full">
-        <div className="border-b mb-4">
-          <TabsList className="w-full flex justify-between bg-transparent p-0">
+        <div className="mb-4 overflow-x-auto scrollbar-none">
+          <TabsList className="w-full flex justify-between bg-gray-800/50 rounded-xl p-1">
             <TabsTrigger 
               value="stocks" 
-              className="flex-1 py-3 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+              className="flex-1 py-2 rounded-lg text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm"
             >
               Stocks
             </TabsTrigger>
             <TabsTrigger 
               value="etfs" 
-              className="flex-1 py-3 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+              className="flex-1 py-2 rounded-lg text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm"
             >
               ETFs
             </TabsTrigger>
             <TabsTrigger 
               value="crypto" 
-              className="flex-1 py-3 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+              className="flex-1 py-2 rounded-lg text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm"
             >
               Crypto
+            </TabsTrigger>
+            <TabsTrigger 
+              value="bonds" 
+              className="flex-1 py-2 rounded-lg text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Bonds
+            </TabsTrigger>
+            <TabsTrigger 
+              value="derivatives" 
+              className="flex-1 py-2 rounded-lg text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Derivatives
             </TabsTrigger>
           </TabsList>
         </div>
@@ -215,6 +277,44 @@ const SearchSection: React.FC<SearchSectionProps> = ({ searchQuery, favorites, o
           ) : (
             <div className="text-center py-8 text-gray-500">
               No cryptocurrencies found matching your search.
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="bonds">
+          {filteredBonds.length > 0 ? (
+            <div className="space-y-4">
+              {filteredBonds.map(bond => (
+                <AssetCard
+                  key={bond.id}
+                  asset={bond}
+                  isFavorite={favorites.includes(bond.id)}
+                  onToggleFavorite={() => onToggleFavorite(bond.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No bonds found matching your search.
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="derivatives">
+          {filteredDerivatives.length > 0 ? (
+            <div className="space-y-4">
+              {filteredDerivatives.map(derivative => (
+                <AssetCard
+                  key={derivative.id}
+                  asset={derivative}
+                  isFavorite={favorites.includes(derivative.id)}
+                  onToggleFavorite={() => onToggleFavorite(derivative.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No derivatives found matching your search.
             </div>
           )}
         </TabsContent>

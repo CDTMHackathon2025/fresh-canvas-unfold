@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Bell, User, Settings, ArrowLeft } from "lucide-react";
+import { Bell, UserRound, Settings, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -76,10 +76,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTabs = true
         
         <Popover>
           <PopoverTrigger asChild>
-            <Avatar className="h-8 w-8 ml-2 cursor-pointer">
-              <AvatarImage src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80" alt="User" />
-              <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
+            <Button variant="ghost" size="icon" className="rounded-full cursor-pointer">
+              <UserRound className="h-5 w-5" />
+            </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
             <Card className="border-0">
@@ -87,7 +86,6 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTabs = true
                 <div className="p-4 border-b">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80" alt="User" />
                       <AvatarFallback>JD</AvatarFallback>
                     </Avatar>
                     <div>

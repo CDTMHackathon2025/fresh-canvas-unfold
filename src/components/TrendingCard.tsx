@@ -9,8 +9,6 @@ interface TrendingCardProps {
   trend: string;
   id?: string;
   onClick?: (id: string) => void;
-  className?: string;
-  style?: React.CSSProperties;
 }
 
 const TrendingCard: React.FC<TrendingCardProps> = ({
@@ -19,9 +17,7 @@ const TrendingCard: React.FC<TrendingCardProps> = ({
   imageUrl,
   trend,
   id = "trending-item",
-  onClick,
-  className = "",
-  style
+  onClick
 }) => {
   const handleClick = () => {
     if (onClick && id) {
@@ -31,9 +27,8 @@ const TrendingCard: React.FC<TrendingCardProps> = ({
 
   return (
     <div 
-      className={`rounded-xl overflow-hidden relative h-[280px] w-full shadow-lg cursor-pointer ${className}`}
+      className="rounded-xl overflow-hidden relative h-[280px] w-full shadow-lg cursor-pointer"
       onClick={handleClick}
-      style={style}
     >
       {/* Image with gradient overlay */}
       <div className="absolute inset-0 image-overlay">

@@ -36,7 +36,8 @@ const Chat = () => {
     isListening,
     wakeWordDetected,
     isWaitingForCommand,
-    isSpeechRecognitionSupported
+    isSpeechRecognitionSupported,
+    toggleVoiceInput
   } = useSpeechRecognition(handleSendVoiceMessage);
   
   // Avatar state
@@ -52,6 +53,23 @@ const Chat = () => {
       setAvatarStatus("idle");
     }
   }, [isListening, isWaitingForCommand, isSpeaking]);
+
+  // Synchronize voice active state with listening
+  useEffect(() => {
+    if (isVoiceActive && !isListening) {
+      toggleVoiceInput();
+    } else if (!isVoiceActive && isListening) {
+      toggleVoiceInput();
+    }
+  }, [isVoiceActive, isListening]);
+
+  // Handle voice toggle with our custom toggle function
+  const handleToggleVoice = () => {
+    toggleVoice();
+    if (!isVoiceActive) {
+      toggleVoiceInput();
+    }
+  };
 
   // Disable voice activation if speech recognition is not supported
   useEffect(() => {
@@ -109,9 +127,10 @@ const Chat = () => {
             isLoading={isLoading}
             isVoiceActive={isVoiceActive}
             speechEnabled={speechEnabled}
-            toggleVoice={toggleVoice}
+            toggleVoice={handleToggleVoice}
             toggleSpeech={toggleSpeech}
             isSpeechRecognitionSupported={isSpeechRecognitionSupported}
+            isListening={isListening}
           />
         </div>
       </main>

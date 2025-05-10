@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import PortfolioSummary from "@/components/PortfolioSummary";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 
@@ -24,6 +24,7 @@ interface TodayContentProps {
   }>;
   activeStockTab: string;
   setActiveStockTab: (tab: string) => void;
+  hidePortfolioSummary?: boolean;
 }
 
 const TodayContent: React.FC<TodayContentProps> = ({
@@ -31,28 +32,21 @@ const TodayContent: React.FC<TodayContentProps> = ({
   chartData,
   stocksData,
   activeStockTab,
-  setActiveStockTab
+  setActiveStockTab,
+  hidePortfolioSummary = false
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  // Animation effect when component mounts
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
-
   return (
-    <div className="space-y-6 text-white">
-      <div className={`mb-6 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '100ms' }}>
-        <h1 className="text-2xl font-bold mb-4">Your Portfolio</h1>
-        <PortfolioSummary {...portfolioData} />
-      </div>
+    <div className="space-y-6 animate-fade-in text-white">
+      {!hidePortfolioSummary && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Your Portfolio</h1>
+          <PortfolioSummary {...portfolioData} />
+        </div>
+      )}
       
-      <div className={`my-8 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '200ms' }}>
-        <h2 className="text-lg font-semibold mb-3">Performance Overview</h2>
-        <PortfolioPerformanceChart chartData={chartData} />
-      </div>
+      <PortfolioPerformanceChart chartData={chartData} />
       
-      <div className={`mt-8 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '300ms' }}>
+      <div className="mt-8">
         <h2 className="text-lg font-semibold mb-3">Your Investments (1D)</h2>
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl shadow-sm overflow-hidden border border-gray-800">
           <table className="w-full">

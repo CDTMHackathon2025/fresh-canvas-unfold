@@ -89,11 +89,43 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     };
   }, [onSpeechResult]);
 
+  const toggleVoiceInput = () => {
+    if (!isSpeechRecognitionSupported) return;
+    
+    if (isListening) {
+      // Currently listening, so stop
+      if (voiceRecognitionRef.current) {
+        try {
+          voiceRecognitionRef.current.stop();
+          setIsListening(false);
+          setIsWaitingForCommand(false);
+        } catch (e) {
+          console.error("Error stopping voice recognition:", e);
+        }
+      }
+    } else {
+      // Not listening, so start
+      if (voiceRecognitionRef.current) {
+        try {
+          voiceRecognitionRef.current.start();
+          toast({
+            title: "Voice input activated",
+            description: "Say 'Hey Trade' to start giving a command",
+            duration: 3000,
+          });
+        } catch (e) {
+          console.error("Error starting voice recognition:", e);
+        }
+      }
+    }
+  };
+
   return {
     isListening,
     wakeWordDetected,
     isWaitingForCommand,
     voiceRecognitionRef,
-    isSpeechRecognitionSupported
+    isSpeechRecognitionSupported,
+    toggleVoiceInput
   };
 };
