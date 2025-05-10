@@ -1,3 +1,4 @@
+
 interface OpenAITextResponse {
   id: string;
   object: string;
@@ -41,7 +42,10 @@ export const sendMessageToOpenAI = async (
   apiKey: string,
   systemPrompt?: string
 ): Promise<string> => {
-  // Removed the intentional error trigger check
+  // Validate API key
+  if (!apiKey) {
+    throw new Error("OpenAI API key is not configured");
+  }
 
   try {
     const defaultPrompt = "You are 'Hey Trade', a friendly AI assistant with visual presence. You have a virtual face that animates as you speak. You specialize in financial advice but can discuss any topic. Keep your responses concise and engaging as if having a face-to-face conversation. Use simple language and avoid very long explanations.";

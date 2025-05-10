@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -10,12 +9,16 @@ import { useChatState } from "@/hooks/useChatState";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, Code } from "lucide-react";
+import { AlertTriangle, Code, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Chat = () => {
   // Initialize text-to-speech
   const { textToSpeechRef } = useTextToSpeech();
+  
+  // Check if API key is configured
+  const apiKeyConfigured = Boolean(import.meta.env.VITE_OPENAI_API_KEY);
   
   // Initialize chat state
   const { 
@@ -125,6 +128,17 @@ const Chat = () => {
       
       {/* Increased top padding from pt-20 to pt-24 and increased mt-4 to mt-6 */}
       <main className="flex-1 flex flex-col pt-28 mt-8 pb-28">
+        {/* Display API key warning if not configured */}
+        {!apiKeyConfigured && (
+          <Alert variant="destructive" className="mx-4 mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>API Key Missing</AlertTitle>
+            <AlertDescription>
+              Please configure your VITE_OPENAI_API_KEY environment variable to enable full chat functionality.
+            </AlertDescription>
+          </Alert>
+        )}
+      
         {/* Avatar section with more space */}
         <div className="flex justify-center py-4 sticky top-16 z-10 bg-black/40 backdrop-blur-sm">
           <Avatar3D 

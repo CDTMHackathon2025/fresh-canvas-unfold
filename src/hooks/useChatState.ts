@@ -16,8 +16,9 @@ interface Message {
   timestamp: Date;
 }
 
-// Updated API key without the issue marker
-const API_KEY = "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";
+// Replace the hardcoded API key with an imported value
+// The API key should be properly managed by the environment
+const API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
 export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
   const [messages, setMessages] = useState<Message[]>([
@@ -125,7 +126,11 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     const responseComponents = generateModularResponseComponents(updatedContext, messageText);
 
     try {
-      // Use the updated API key without the issue marker
+      // Check if API key is available
+      if (!API_KEY) {
+        throw new Error("OpenAI API key is not configured");
+      }
+      
       const response = await sendMessageToOpenAI(messageText, API_KEY, systemPrompt);
       
       // If in debug mode, append context information
@@ -166,25 +171,37 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     } catch (error: any) {
       console.error("Failed to get response:", error);
       
-      // Even if there's an error, provide a fallback response
-      const fallbackResponse = "I'm having trouble connecting to my knowledge base right now. Let me share what I know about financial topics. Feel free to ask about investing, stocks, ETFs, bonds, or portfolio management.";
-      
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: fallbackResponse,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      // Still show an error toast to inform the user
-      toast({
-        title: "Connection Issue",
-        description: "Using offline mode due to connection issues.",
-        variant: "default",
-        duration: 3000,
-      });
+      // Show more specific error for missing API key
+      let errorMessage = "I'm having trouble connecting to my knowledge base right now.";
+      if (error.message === "OpenAI API key is not configured") {
+        errorMessage = "OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your environment variables.";
+        toast({
+          title: "API Key Missing",
+          description: "OpenAI API key is not configured.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } else {
+        // Even if there's an error, provide a fallback response
+        const fallbackResponse = "I'm having trouble connecting to my knowledge base right now. Let me share what I know about financial topics. Feel free to ask about investing, stocks, ETFs, bonds, or portfolio management.";
+        
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: fallbackResponse,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+        
+        // Still show an error toast to inform the user
+        toast({
+          title: "Connection Issue",
+          description: "Using offline mode due to connection issues.",
+          variant: "default",
+          duration: 3000,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
