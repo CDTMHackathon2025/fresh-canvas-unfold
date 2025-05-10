@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TrendingCard from "@/components/TrendingCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,10 +25,17 @@ const StoriesAndInsights: React.FC<StoriesAndInsightsProps> = ({
   setActiveTrendingTab,
   onViewDetails
 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  // Animation effect when component mounts
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Featured Story */}
-      <section className="mb-6">
+      <section className={`mb-6 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '100ms' }}>
         <h2 className="text-xl font-bold mb-4">Featured Story</h2>
         <TrendingCard
           title={trendingData[0].title}
@@ -41,7 +48,7 @@ const StoriesAndInsights: React.FC<StoriesAndInsightsProps> = ({
       </section>
       
       {/* Trending News */}
-      <section>
+      <section className={`transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '200ms' }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Trending</h2>
           <Tabs value={activeTrendingTab} onValueChange={setActiveTrendingTab}>
@@ -63,6 +70,8 @@ const StoriesAndInsights: React.FC<StoriesAndInsightsProps> = ({
                 trend={item.trend}
                 id={item.id}
                 onClick={onViewDetails}
+                className={`transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{ transitionDelay: `${(index + 3) * 100}ms` }}
               />
             ))}
           </div>

@@ -1,10 +1,17 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Shield, Star, PiggyBank, DollarSign, TrendingUp, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 const FinancialInsights = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  // Animation effect when component mounts
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+  
   // Sample data for each section
   const riskData = {
     score: 65,
@@ -36,7 +43,7 @@ const FinancialInsights = () => {
   return (
     <div className="space-y-6">
       {/* Risk Section */}
-      <Card className="p-4 border-none shadow-sm">
+      <Card className={`p-4 border-none shadow-sm transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '100ms' }}>
         <div className="flex items-center gap-3 mb-3">
           <div className="bg-orange-100 p-2 rounded-lg">
             <Shield className="h-5 w-5 text-orange-600" />
@@ -75,7 +82,7 @@ const FinancialInsights = () => {
       </Card>
       
       {/* Recommendations Section */}
-      <Card className="p-4 border-none shadow-sm">
+      <Card className={`p-4 border-none shadow-sm transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '200ms' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-100 p-2 rounded-lg">
@@ -102,7 +109,7 @@ const FinancialInsights = () => {
       </Card>
       
       {/* Savings Plans Section */}
-      <Card className="p-4 border-none shadow-sm">
+      <Card className={`p-4 border-none shadow-sm transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '300ms' }}>
         <div className="flex items-center gap-3 mb-3">
           <div className="bg-emerald-100 p-2 rounded-lg">
             <PiggyBank className="h-5 w-5 text-emerald-600" />
@@ -129,7 +136,7 @@ const FinancialInsights = () => {
       </Card>
       
       {/* Cash Position Section */}
-      <Card className="p-4 border-none shadow-sm">
+      <Card className={`p-4 border-none shadow-sm transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '400ms' }}>
         <div className="flex items-center gap-3 mb-3">
           <div className="bg-blue-100 p-2 rounded-lg">
             <DollarSign className="h-5 w-5 text-blue-600" />
