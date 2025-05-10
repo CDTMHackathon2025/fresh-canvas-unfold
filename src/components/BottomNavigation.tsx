@@ -17,7 +17,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, to }) => {
       to={to}
       className={cn(
         "flex flex-col items-center justify-center",
-        active ? "text-navy" : "text-muted-foreground"
+        active ? "text-white" : "text-muted-foreground"
       )}
     >
       {icon}
