@@ -10,7 +10,8 @@ import { useChatState } from "@/hooks/useChatState";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Code } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Chat = () => {
   // Initialize text-to-speech
@@ -25,8 +26,10 @@ const Chat = () => {
     isVoiceActive,
     isSpeaking,
     speechEnabled,
+    debugMode,
     toggleVoice,
     toggleSpeech,
+    toggleDebugMode,
     handleSendVoiceMessage,
     handleSendMessage
   } = useChatState(textToSpeechRef);
@@ -124,6 +127,22 @@ const Chat = () => {
               <span>Voice input not supported</span>
             </div>
           )}
+          
+          {/* Debug mode toggle button */}
+          <div className="absolute right-3 bottom-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-7 px-2 rounded-full text-xs border-gray-700 ${
+                debugMode ? 'bg-blue-900/50 text-blue-200' : 'bg-transparent text-gray-400'
+              }`}
+              onClick={toggleDebugMode}
+              title="Toggle Debug Mode"
+            >
+              <Code size={14} className="mr-1" />
+              <span>{debugMode ? 'Debug On' : 'Debug'}</span>
+            </Button>
+          </div>
         </div>
         
         {/* Messages list - taking available space */}

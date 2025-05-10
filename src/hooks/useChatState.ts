@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sendMessageToOpenAI } from "@/services/openaiService";
@@ -6,6 +5,7 @@ import {
   createInitialContext, 
   updateContext, 
   generateSystemPrompt,
+  generateModularResponseComponents,
   ConversationContext 
 } from "@/utils/financialContext";
 
@@ -36,6 +36,8 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
   const [conversationContext, setConversationContext] = useState<ConversationContext>(
     createInitialContext()
   );
+  // New state to track the current response generation mode
+  const [debugMode, setDebugMode] = useState(false);
 
   // Reference to store the current speech instance
   const speechInstanceRef = { current: null };
@@ -59,6 +61,16 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     
     toast({
       title: speechEnabled ? "Speech output disabled" : "Speech output enabled",
+      duration: 2000
+    });
+  };
+
+  // Toggle debug mode for viewing internal context
+  const toggleDebugMode = () => {
+    setDebugMode(!debugMode);
+    toast({
+      title: debugMode ? "Debug mode disabled" : "Debug mode enabled",
+      description: debugMode ? "Normal responses resumed" : "Showing context in responses",
       duration: 2000
     });
   };
@@ -95,21 +107,44 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     setMessage("");
     setIsLoading(true);
     
+    // Process debugging commands if in debug mode
+    if (debugMode && messageText.startsWith("/debug")) {
+      handleDebugCommand(messageText);
+      setIsLoading(false);
+      return;
+    }
+    
     // Update conversation context based on the user message
     const updatedContext = updateContext(conversationContext, messageText);
     setConversationContext(updatedContext);
     
     // Generate system prompt based on updated context
     const systemPrompt = generateSystemPrompt(updatedContext);
+    
+    // Generate modular response components
+    const responseComponents = generateModularResponseComponents(updatedContext, messageText);
 
     try {
       // Use the updated API key without the issue marker
       const response = await sendMessageToOpenAI(messageText, API_KEY, systemPrompt);
       
+      // If in debug mode, append context information
+      let finalResponse = response;
+      if (debugMode) {
+        finalResponse = `${response}\n\n---\n**Context Debug (Developer Mode)**\n\`\`\`json\n${JSON.stringify({
+          recentStocks: updatedContext.recentStocks,
+          recentTopics: updatedContext.recentTopics,
+          userPreferences: updatedContext.userPreferences,
+          portfolioParams: updatedContext.parameters.portfolioComposition,
+          marketParams: updatedContext.parameters.marketConditions,
+          conversationFlow: updatedContext.parameters.conversationFlow
+        }, null, 2)}\n\`\`\``;
+      }
+      
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: response,
+        content: finalResponse,
         timestamp: new Date()
       };
 
@@ -155,6 +190,91 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     }
   };
 
+  // Debug command handler
+  const handleDebugCommand = (command: string) => {
+    const parts = command.split(" ");
+    
+    if (parts[1] === "context") {
+      // Show current context debug info
+      const debugMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: `**Current Context (Developer Mode)**\n\`\`\`json\n${JSON.stringify(conversationContext, null, 2)}\n\`\`\``,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, debugMessage]);
+    }
+    else if (parts[1] === "reset") {
+      // Reset context to initial state
+      setConversationContext(createInitialContext());
+      
+      const debugMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: "**Context has been reset to initial state (Developer Mode)**",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, debugMessage]);
+    }
+    else if (parts[1] === "set" && parts.length >= 4) {
+      // Set a specific context parameter
+      try {
+        const path = parts[2].split('.');
+        const value = parts.slice(3).join(' ');
+        
+        let target = conversationContext;
+        for (let i = 0; i < path.length - 1; i++) {
+          if (!target[path[i]]) {
+            target[path[i]] = {};
+          }
+          target = target[path[i]];
+        }
+        
+        // Try to parse as number or boolean, otherwise keep as string
+        let parsedValue = value;
+        if (!isNaN(Number(value))) {
+          parsedValue = Number(value);
+        } else if (value === 'true' || value === 'false') {
+          parsedValue = value === 'true';
+        }
+        
+        target[path[path.length - 1]] = parsedValue;
+        setConversationContext({...conversationContext});
+        
+        const debugMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: `**Context parameter ${parts[2]} updated to: ${value} (Developer Mode)**`,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, debugMessage]);
+      } catch (error) {
+        const debugMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: `**Error setting context parameter: ${error.message} (Developer Mode)**`,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, debugMessage]);
+      }
+    }
+    else {
+      // Unknown debug command
+      const debugMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: "**Unknown debug command. Available commands: /debug context, /debug reset, /debug set [path] [value] (Developer Mode)**",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, debugMessage]);
+    }
+  };
+
   return {
     messages,
     message,
@@ -163,8 +283,10 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     isVoiceActive,
     isSpeaking,
     speechEnabled,
+    debugMode,
     toggleVoice,
     toggleSpeech,
+    toggleDebugMode,
     handleSendVoiceMessage,
     handleSendMessage
   };
