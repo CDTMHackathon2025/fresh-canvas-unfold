@@ -68,7 +68,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     }
   }, []);
 
-  // Initialize speech recognition with proper error handling
+  // Initialize speech recognition with improved error handling
   const initializeSpeechRecognition = useCallback(async () => {
     if (initializationAttempted.current) return;
     initializationAttempted.current = true;
@@ -100,6 +100,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
         // Speech result received
         (transcript) => {
           console.log("Speech result received:", transcript);
+          setWakeWordDetected(false);
           setIsWaitingForCommand(false);
           if (transcript && transcript.trim().length > 0) {
             onSpeechResult(transcript);
@@ -113,8 +114,9 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
         // Listening ended
         () => {
           console.log("Voice listening ended");
-          setIsListening(false);
+          setWakeWordDetected(false);
           setIsWaitingForCommand(false);
+          setIsListening(false);
         }
       );
       
@@ -138,18 +140,21 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     }
   }, [checkSpeechRecognitionSupport, hasRequestedPermission, onSpeechResult, requestMicrophonePermission]);
 
-  // Initialize on component mount with permission handling
+  // Initialize on component mount with better cleanup
   useEffect(() => {
     console.log("useSpeechRecognition effect running...");
+    
+    // Start initialization process
     initializeSpeechRecognition();
     
     // Clean up on component unmount
     return () => {
+      console.log("Cleaning up speech recognition");
       if (voiceRecognitionRef.current) {
         try {
           voiceRecognitionRef.current.stop();
         } catch (e) {
-          console.error("Error stopping voice recognition:", e);
+          console.error("Error stopping voice recognition during cleanup:", e);
         }
       }
       
@@ -159,37 +164,72 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     };
   }, [initializeSpeechRecognition]);
 
-  // Implement a function to restart recognition if it crashes or stops
+  // Implement a function to restart recognition with better error handling
   const ensureRecognitionIsRunning = useCallback(() => {
-    if (isSpeechRecognitionSupported && voiceRecognitionRef.current) {
-      try {
-        // First stop any existing instance
-        voiceRecognitionRef.current.stop();
-        
-        // Then start after a short delay
-        restartTimeoutRef.current = setTimeout(() => {
+    if (!isSpeechRecognitionSupported || !voiceRecognitionRef.current) {
+      console.log("Cannot ensure recognition - not supported or not initialized");
+      return;
+    }
+    
+    console.log("Ensuring recognition is running");
+    try {
+      // First stop any existing instance to reset state
+      voiceRecognitionRef.current.stop();
+      
+      // Then start after a short delay
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+      
+      restartTimeoutRef.current = setTimeout(() => {
+        try {
           voiceRecognitionRef.current.start();
           console.log("Voice recognition restarted by ensure function");
-        }, 300);
-      } catch (err) {
-        console.error("Error in ensureRecognitionIsRunning:", err);
-        
-        // If we get an error, try to reinitialize
-        initializationAttempted.current = false;
-        initializeSpeechRecognition();
+        } catch (err) {
+          console.error("Failed to restart in ensure function:", err);
+        }
+      }, 500); // Slightly longer delay for more reliable restart
+    } catch (err) {
+      console.error("Error in ensureRecognitionIsRunning:", err);
+      
+      // If we get an error, reset and try to reinitialize
+      if (voiceRecognitionRef.current) {
+        try {
+          voiceRecognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors on stop during recovery
+        }
       }
+      
+      // Reset initialization flag to allow fresh start
+      initializationAttempted.current = false;
+      
+      // Schedule reinitialization after delay
+      setTimeout(() => {
+        initializeSpeechRecognition();
+      }, 2000);
     }
   }, [isSpeechRecognitionSupported, initializeSpeechRecognition]);
 
-  // Set up a periodic check to ensure recognition is running
+  // Set up a watchdog to ensure recognition is running correctly
   useEffect(() => {
     if (isSpeechRecognitionSupported) {
-      const checkInterval = setInterval(ensureRecognitionIsRunning, 30000); // Check every 30 seconds
-      return () => clearInterval(checkInterval);
+      const watchdogInterval = setInterval(() => {
+        if (isListening) {
+          console.log("Recognition watchdog check - currently listening");
+        } else {
+          console.log("Recognition watchdog check - NOT listening");
+          if (voiceRecognitionRef.current) {
+            ensureRecognitionIsRunning();
+          }
+        }
+      }, 15000); // Check every 15 seconds
+      
+      return () => clearInterval(watchdogInterval);
     }
-  }, [isSpeechRecognitionSupported, ensureRecognitionIsRunning]);
+  }, [isSpeechRecognitionSupported, isListening, ensureRecognitionIsRunning]);
 
-  // Toggle voice input with proper permission handling
+  // Toggle voice input with improved state management
   const toggleVoiceInput = useCallback(async () => {
     console.log("Toggle voice input called", { isSpeechRecognitionSupported, isListening });
     
@@ -213,20 +253,28 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
       // Currently listening, so stop
       if (voiceRecognitionRef.current) {
         try {
+          console.log("Stopping voice recognition");
           voiceRecognitionRef.current.stop();
-          setIsListening(false);
+          
+          // UI state will be updated by the onListeningEnd callback
+          setWakeWordDetected(false);
           setIsWaitingForCommand(false);
         } catch (e) {
           console.error("Error stopping voice recognition:", e);
+          // Force UI update in case callback doesn't fire
+          setIsListening(false);
+          setWakeWordDetected(false);
+          setIsWaitingForCommand(false);
         }
       }
     } else {
       // Not listening, so start
       if (voiceRecognitionRef.current) {
         try {
+          console.log("Starting voice recognition");
           voiceRecognitionRef.current.start();
           
-          // Only show the toast once when activating
+          // UI update will come from the onListeningStart callback
           toast({
             title: "Voice input activated",
             description: "Say 'Hey Trade' to start giving a command",
@@ -237,7 +285,9 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
           
           // If we get an error on start, try to reinitialize
           initializationAttempted.current = false;
-          initializeSpeechRecognition();
+          setTimeout(() => {
+            initializeSpeechRecognition();
+          }, 1000);
         }
       } else {
         // If recognition wasn't initialized, try again

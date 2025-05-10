@@ -134,13 +134,14 @@ export const initVoiceRecognition = (
   }
   
   try {
+    // Create a fresh recognition instance
     const recognition = new SpeechRecognition();
     
-    // Configure recognition with enhanced settings
+    // Configure recognition with improved settings
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    recognition.maxAlternatives = 5; // Increased for better detection
+    recognition.maxAlternatives = 3; // Balance between accuracy and performance
     
     // Variables to track state
     let isListeningForCommand = false;
@@ -148,20 +149,32 @@ export const initVoiceRecognition = (
     let lastTranscript = '';
     let hasErrored = false;
     let recognitionRestartCount = 0;
+    let isListeningActive = true; // Track if we actually want to be listening
+    let isProcessingSpeech = false; // Track if we're currently processing speech
     
-    // Handle results with improved wake word detection
+    // Handle results with improved wake word detection and command completion
     recognition.onresult = (event: any) => {
-      console.log("Speech recognition result received", event.results.length);
+      console.log("Speech recognition result received", { 
+        results: event.results.length, 
+        isListeningForCommand
+      });
+      
       const latestResult = event.results[event.results.length - 1];
       const transcript = latestResult[0].transcript;
-
-      console.log("Speech recognized:", transcript);
       
-      // Wake word detection with enhanced sensitivity
+      // Don't process if we're not supposed to be listening
+      if (!isListeningActive) {
+        console.log("Ignoring speech result - listening is inactive");
+        return;
+      }
+
+      console.log("Speech recognized:", transcript, "isFinal:", latestResult.isFinal);
+      
+      // Wake word detection mode
       if (!isListeningForCommand) {
-        // Check all alternatives for wake word to improve detection
+        // Check for wake word in any of the alternatives
         let wakeWordFound = false;
-        for (let i = 0; i < Math.min(latestResult.length, 5); i++) {
+        for (let i = 0; i < Math.min(latestResult.length, 3); i++) {
           const alternativeTranscript = latestResult[i]?.transcript || "";
           if (detectWakeWord(alternativeTranscript)) {
             wakeWordFound = true;
@@ -174,189 +187,275 @@ export const initVoiceRecognition = (
           isListeningForCommand = true;
           lastTranscript = '';
           onWakeWordDetected();
+          isProcessingSpeech = true;
           
-          // Reset after 10 seconds of no activity
+          // Reset after timeout if no further input received
           if (commandTimeout) clearTimeout(commandTimeout);
           commandTimeout = setTimeout(() => {
+            console.log("Command timeout reached - ending command mode");
             isListeningForCommand = false;
+            isProcessingSpeech = false;
             onListeningEnd();
-          }, 10000);
+          }, 8000); // 8 seconds to complete command
         }
-      } else {
-        // We're already listening for a command
+      } 
+      // Command mode - already listening for a command
+      else {
         const lowerTranscript = transcript.toLowerCase();
         
-        if (lowerTranscript.includes("stop") || 
-            lowerTranscript.includes("cancel") ||
+        // Check for explicit stop commands
+        if (lowerTranscript.includes("stop listening") || 
+            lowerTranscript.includes("cancel command") ||
             lowerTranscript.includes("nevermind")) {
+          console.log("Stop command detected");
           isListeningForCommand = false;
+          isProcessingSpeech = false;
           onListeningEnd();
           if (commandTimeout) clearTimeout(commandTimeout);
-        } else if (latestResult.isFinal) {
-          // This is a final result, send it to the callback
+          return;
+        }
+        
+        // Final result - ready to process command
+        if (latestResult.isFinal) {
+          console.log("Final result received:", transcript);
+          // This is a final result, capture it
           lastTranscript = transcript;
           
-          // Keep command mode active for a short period to let user continue
-          if (commandTimeout) clearTimeout(commandTimeout);
-          commandTimeout = setTimeout(() => {
-            isListeningForCommand = false;
-            onListeningEnd();
-            onSpeechResult(lastTranscript);
-          }, 1500);
-        } else {
-          // Still speaking, extend the timeout
-          if (commandTimeout) clearTimeout(commandTimeout);
-          commandTimeout = setTimeout(() => {
-            if (lastTranscript) {
+          // Only process if we have meaningful content
+          if (lastTranscript.trim().length > 3) {
+            console.log("Processing final command:", lastTranscript);
+            // Clear any existing timeout
+            if (commandTimeout) clearTimeout(commandTimeout);
+            
+            // Set a short timeout to allow for any additional speech segments
+            commandTimeout = setTimeout(() => {
+              console.log("Command complete - sending result:", lastTranscript);
               isListeningForCommand = false;
+              isProcessingSpeech = false;
+              onListeningEnd();
+              onSpeechResult(lastTranscript);
+            }, 1000); // 1 second grace period
+          } else {
+            // Reset the timeout for short results that might not be complete
+            if (commandTimeout) clearTimeout(commandTimeout);
+            commandTimeout = setTimeout(() => {
+              console.log("Command timeout with short input - ending command mode");
+              isListeningForCommand = false;
+              isProcessingSpeech = false;
+              onListeningEnd();
+            }, 5000); // Extended timeout for short inputs
+          }
+        } 
+        // Still speaking - extend the timeout
+        else if (transcript.trim().length > 0) {
+          console.log("Extending command timeout for ongoing speech");
+          if (commandTimeout) clearTimeout(commandTimeout);
+          commandTimeout = setTimeout(() => {
+            // If we have content when timeout expires, submit it
+            if (lastTranscript.trim().length > 3) {
+              console.log("Command timeout reached with content - submitting:", lastTranscript);
+              isListeningForCommand = false;
+              isProcessingSpeech = false;
               onListeningEnd();
               onSpeechResult(lastTranscript);
             } else {
+              console.log("Command timeout reached without valid content - ending command mode");
               isListeningForCommand = false;
+              isProcessingSpeech = false;
               onListeningEnd();
             }
-          }, 3000);
+          }, 3000); // 3 second timeout for ongoing speech
         }
       }
     };
     
-    // Improved restart handling
+    // Improved recognition end handling with state management
     recognition.onend = () => {
-      console.log("Recognition ended, hasErrored:", hasErrored);
-      // If this is due to an error, don't restart automatically
-      if (hasErrored) {
-        console.log("Recognition ended after error, not restarting automatically");
-        hasErrored = false;
-        onListeningEnd(); // Ensure we notify that listening has ended
+      console.log("Recognition ended", { 
+        hasErrored, 
+        isListeningActive,
+        isListeningForCommand,
+        isProcessingSpeech 
+      });
+      
+      // Don't restart if we had an error or if listening is deactivated
+      if (hasErrored || !isListeningActive) {
+        console.log("Not restarting recognition - error or deactivated");
+        // Ensure UI is updated
+        if (isProcessingSpeech) {
+          isProcessingSpeech = false;
+          onListeningEnd();
+        }
         return;
       }
       
-      // Limit restart attempts to prevent rapid restart loops
+      // Limit restart attempts to prevent browser throttling
       if (recognitionRestartCount > 5) {
-        console.log("Too many restart attempts, waiting before trying again");
+        console.log("Too many restart attempts - cooling down");
         setTimeout(() => {
-          recognitionRestartCount = 0;
-          try {
-            recognition.start();
-            console.log("Voice recognition restarted after cooling period");
-          } catch (error) {
-            console.error("Error restarting speech recognition after cooling period:", error);
+          if (isListeningActive) {
+            recognitionRestartCount = 0;
+            try {
+              recognition.start();
+              console.log("Recognition restarted after cooling period");
+            } catch (error) {
+              console.error("Error restarting recognition after cooling:", error);
+              hasErrored = true;
+              if (isProcessingSpeech) {
+                isProcessingSpeech = false;
+                onListeningEnd();
+              }
+            }
           }
-        }, 5000);
+        }, 5000); // 5 second cooling period
         return;
       }
       
-      // Otherwise restart recognition to keep listening for wake word
-      recognitionRestartCount++;
-      try {
-        setTimeout(() => {
-          recognition.start();
-          console.log("Voice recognition restarted automatically");
-        }, 300); // Small delay before restarting
-      } catch (error) {
-        console.error("Error restarting speech recognition:", error);
-        hasErrored = true;
-        onListeningEnd();
+      // Normal restart with small delay to prevent rapid cycling
+      if (isListeningActive) {
+        recognitionRestartCount++;
+        try {
+          setTimeout(() => {
+            if (isListeningActive) {
+              recognition.start();
+              console.log("Recognition restarted automatically");
+            }
+          }, 300); // Small delay before restarting
+        } catch (error) {
+          console.error("Error restarting recognition:", error);
+          hasErrored = true;
+          if (isProcessingSpeech) {
+            isProcessingSpeech = false;
+            onListeningEnd();
+          }
+        }
       }
     };
     
+    // Better error handling
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error', event.error);
+      console.error('Speech recognition error:', event.error);
       
       // Handle specific error types
       switch (event.error) {
         case 'not-allowed':
         case 'service-not-allowed':
-          console.error("Microphone access was denied by the user or system");
+          console.error("Microphone access denied");
           hasErrored = true;
           break;
           
         case 'network':
-          console.error("Network error occurred during speech recognition");
-          // Network errors are often temporary, so let's try again after a delay
+          console.error("Network error in speech recognition");
+          // Network errors may recover, allow restart after delay
           setTimeout(() => {
-            try {
-              recognition.start();
-              console.log("Attempting to restart recognition after network error");
-            } catch (e) {
-              console.error("Failed to restart after network error:", e);
+            if (isListeningActive) {
+              try {
+                recognition.start();
+                console.log("Attempting restart after network error");
+              } catch (e) {
+                console.error("Failed to restart after network error:", e);
+                hasErrored = true;
+              }
             }
           }, 3000);
           break;
           
         case 'no-speech':
-          console.log("No speech detected");
-          // This is a common error that shouldn't stop recognition
-          // It will automatically restart via onend
+          console.log("No speech detected - this is normal");
+          // Common and expected, let onend handle restart
+          break;
+          
+        case 'aborted':
+          console.log("Recognition aborted - this is normal for stop/start");
+          // This happens during normal stop/start cycles
           break;
           
         default:
-          console.error(`Unexpected speech recognition error: ${event.error}`);
-          // Unexpected errors - set hasErrored but let onend restart after proper delay
+          console.error(`Unexpected recognition error: ${event.error}`);
+          // Allow restart but track error state
           hasErrored = false;
       }
       
-      isListeningForCommand = false;
-      onListeningEnd();
+      // Clean up command state if needed
+      if (isListeningForCommand) {
+        isListeningForCommand = false;
+        if (commandTimeout) clearTimeout(commandTimeout);
+      }
+      
+      if (isProcessingSpeech) {
+        isProcessingSpeech = false;
+        onListeningEnd();
+      }
     };
     
-    // For Firefox, which might have different behavior
-    // @ts-ignore
-    if (typeof recognition.addEventListener === 'function') {
-      // @ts-ignore
-      recognition.addEventListener('audiostart', () => {
-        console.log("Audio capture started");
-      });
-      
-      // @ts-ignore
-      recognition.addEventListener('audioend', () => {
-        console.log("Audio capture ended");
-      });
-    }
-    
+    // Interface for controlling speech recognition
     return {
       start: () => {
         try {
+          // Mark as active before starting
+          isListeningActive = true;
+          recognitionRestartCount = 0;
+          isListeningForCommand = false;
+          hasErrored = false;
+          lastTranscript = '';
+          
+          if (commandTimeout) {
+            clearTimeout(commandTimeout);
+            commandTimeout = null;
+          }
+          
           recognition.start();
-          recognitionRestartCount = 0; // Reset counter on manual start
-          console.log("Voice recognition started");
-          // Call onListeningStart to update UI immediately
+          console.log("Voice recognition started successfully");
           onListeningStart();
         } catch (err) {
           console.error("Failed to start speech recognition:", err);
           
-          // Try with explicit permission if this failed
+          // Try with explicit permission if initial start failed
           if (mightRequirePermission()) {
             requestMicrophonePermission()
               .then(granted => {
-                if (granted) {
+                if (granted && isListeningActive) {
                   try {
                     recognition.start();
-                    console.log("Voice recognition started after explicit permission");
+                    console.log("Recognition started after permission grant");
                     onListeningStart();
                   } catch (err2) {
-                    console.error("Still failed to start recognition after permission:", err2);
-                    onListeningEnd(); // Ensure we notify that listening is ended
+                    console.error("Still failed after permission grant:", err2);
+                    hasErrored = true;
+                    onListeningEnd();
                   }
                 } else {
-                  onListeningEnd(); // Permission denied, so listening has ended
+                  hasErrored = true;
+                  onListeningEnd();
                 }
               })
               .catch(err => {
-                console.error("Error requesting permission:", err);
+                console.error("Permission request error:", err);
+                hasErrored = true;
                 onListeningEnd();
               });
           } else {
+            hasErrored = true;
             onListeningEnd();
           }
         }
       },
       stop: () => {
         try {
-          recognition.stop();
+          // Mark as inactive before stopping
+          isListeningActive = false;
           isListeningForCommand = false;
-          if (commandTimeout) clearTimeout(commandTimeout);
-          console.log("Voice recognition stopped");
+          if (commandTimeout) {
+            clearTimeout(commandTimeout);
+            commandTimeout = null;
+          }
+          
+          recognition.stop();
+          console.log("Voice recognition stopped successfully");
+          if (isProcessingSpeech) {
+            isProcessingSpeech = false;
+            onListeningEnd();
+          }
         } catch (err) {
           console.error("Failed to stop speech recognition:", err);
         }

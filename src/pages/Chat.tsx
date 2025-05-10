@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -55,7 +56,7 @@ const Chat = () => {
   useEffect(() => {
     if (isListening || isWaitingForCommand) {
       setAvatarStatus("listening");
-      setAvatarEmotion("thinking");
+      setAvatarEmotion(wakeWordDetected ? "thinking" : "neutral");
     } else if (isSpeaking) {
       setAvatarStatus("speaking");
       setAvatarEmotion("confident");
@@ -63,46 +64,53 @@ const Chat = () => {
       setAvatarStatus("idle");
       setAvatarEmotion("neutral");
     }
-  }, [isListening, isWaitingForCommand, isSpeaking]);
+  }, [isListening, isWaitingForCommand, isSpeaking, wakeWordDetected]);
 
-  // Ensure recognition is running on mount
+  // Ensure recognition is running on mount with improved startup logic
   useEffect(() => {
     console.log("Chat component mounted, checking speech recognition");
     
-    // Start voice recognition immediately if supported and not already listening
-    if (isSpeechRecognitionSupported && !isListening) {
-      console.log("Initializing voice recognition on mount");
-      toggleVoiceInput();
-      toggleVoice(); // Update UI state
-    }
+    const delayedInit = setTimeout(() => {
+      // Start voice recognition if supported
+      if (isSpeechRecognitionSupported && !isListening) {
+        console.log("Initializing voice recognition on mount");
+        toggleVoiceInput();
+        toggleVoice(); // Update UI state
+      }
+    }, 1000); // Small delay to ensure components are fully mounted
     
+    return () => clearTimeout(delayedInit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isSpeechRecognitionSupported]);
 
-  // Ensure recognition is checked periodically
+  // More reliable recognition watchdog
   useEffect(() => {
+    // Set up watchdog timer for voice recognition
     const checkRecognitionInterval = setInterval(() => {
       if (isVoiceActive && !isListening) {
-        console.log("Voice is active but not listening - restarting recognition");
+        console.log("Voice watchdog: Active but not listening - restarting");
         ensureRecognitionIsRunning();
       }
-    }, 15000); // Check every 15 seconds
+    }, 20000); // Check every 20 seconds
     
     return () => clearInterval(checkRecognitionInterval);
   }, [isVoiceActive, isListening, ensureRecognitionIsRunning]);
 
-  // Synchronize voice active state with listening
+  // Improved synchronization between UI state and actual listening
   useEffect(() => {
+    // Avoid unnecessary toggles by checking both sides
     if (isVoiceActive && !isListening) {
+      console.log("Syncing state: Voice active but not listening");
       toggleVoiceInput();
     } else if (!isVoiceActive && isListening) {
+      console.log("Syncing state: Voice inactive but still listening");
       toggleVoiceInput();
     }
   }, [isVoiceActive, isListening, toggleVoiceInput]);
 
-  // Handle voice toggle with our custom toggle function
+  // Handle voice toggle with clearer log messages
   const handleToggleVoice = () => {
-    console.log("Toggling voice input", { currentState: isVoiceActive });
+    console.log("User toggled voice input", { currentState: isVoiceActive, isListening });
     toggleVoice();
     toggleVoiceInput();
   };
@@ -110,6 +118,7 @@ const Chat = () => {
   // Disable voice activation if speech recognition is not supported
   useEffect(() => {
     if (!isSpeechRecognitionSupported && isVoiceActive) {
+      console.log("Disabling voice - not supported by browser");
       toggleVoice();
     }
   }, [isSpeechRecognitionSupported, isVoiceActive, toggleVoice]);
