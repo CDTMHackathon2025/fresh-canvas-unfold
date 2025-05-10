@@ -2,7 +2,13 @@
 // Utility for loading and preparing 3D models for the avatar
 import { Object3D } from 'three';
 import * as THREE from 'three';
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+// We're using the type without importing the actual module
+type GLTFResult = {
+  nodes: Record<string, THREE.Object3D>;
+  materials: Record<string, THREE.Material>;
+  animations: THREE.AnimationClip[];
+  scene: THREE.Group;
+};
 
 // Types for loaded models
 export interface LoadedModel {

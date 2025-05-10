@@ -9,6 +9,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
   const [isWaitingForCommand, setIsWaitingForCommand] = useState(false);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
   const voiceRecognitionRef = useRef<any>(null);
+  const hasShownSupportWarning = useRef(false);
 
   useEffect(() => {
     // Check if speech recognition is supported more reliably
@@ -19,62 +20,75 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     
     if (!isSupported) {
       console.log("Speech Recognition not supported in this browser");
-      toast({
-        title: "Voice input not available",
-        description: "Your browser doesn't support speech recognition. Text input is still available.",
-        duration: 5000,
-      });
+      
+      // Only show the toast once
+      if (!hasShownSupportWarning.current) {
+        toast({
+          title: "Voice input not available",
+          description: "Your browser doesn't support speech recognition. Text input is still available.",
+          duration: 5000,
+        });
+        hasShownSupportWarning.current = true;
+      }
       return () => {};
     }
     
     try {
-      // Initialize voice recognition with callbacks
-      voiceRecognitionRef.current = initVoiceRecognition(
-        // Wake word detected
-        () => {
-          console.log("Wake word detected!");
-          setWakeWordDetected(true);
-          setIsWaitingForCommand(true);
-          // Show toast when wake word is detected
-          toast({
-            title: "Voice activated",
-            description: "I'm listening...",
-            duration: 3000,
-          });
-        },
-        // Speech result received
-        (transcript) => {
-          console.log("Speech result received:", transcript);
-          setIsWaitingForCommand(false);
-          if (transcript && transcript.trim().length > 0) {
-            onSpeechResult(transcript);
+      // Only initialize if we haven't already
+      if (!voiceRecognitionRef.current) {
+        // Initialize voice recognition with callbacks
+        voiceRecognitionRef.current = initVoiceRecognition(
+          // Wake word detected
+          () => {
+            console.log("Wake word detected!");
+            setWakeWordDetected(true);
+            setIsWaitingForCommand(true);
+            // Show toast when wake word is detected
+            toast({
+              title: "Voice activated",
+              description: "I'm listening...",
+              duration: 3000,
+            });
+          },
+          // Speech result received
+          (transcript) => {
+            console.log("Speech result received:", transcript);
+            setIsWaitingForCommand(false);
+            if (transcript && transcript.trim().length > 0) {
+              onSpeechResult(transcript);
+            }
+          },
+          // Listening started
+          () => {
+            console.log("Voice listening started");
+            setIsListening(true);
+          },
+          // Listening ended
+          () => {
+            console.log("Voice listening ended");
+            setIsListening(false);
+            setIsWaitingForCommand(false);
           }
-        },
-        // Listening started
-        () => {
-          console.log("Voice listening started");
-          setIsListening(true);
-        },
-        // Listening ended
-        () => {
-          console.log("Voice listening ended");
-          setIsListening(false);
-          setIsWaitingForCommand(false);
+        );
+        
+        // Start voice recognition if available
+        if (voiceRecognitionRef.current) {
+          voiceRecognitionRef.current.start();
         }
-      );
-      
-      // Start voice recognition if available
-      if (voiceRecognitionRef.current) {
-        voiceRecognitionRef.current.start();
       }
     } catch (error) {
       console.error("Error initializing voice recognition:", error);
       setIsSpeechRecognitionSupported(false);
-      toast({
-        title: "Voice input error",
-        description: "Failed to initialize voice recognition.",
-        duration: 5000,
-      });
+      
+      // Only show the toast once
+      if (!hasShownSupportWarning.current) {
+        toast({
+          title: "Voice input error",
+          description: "Failed to initialize voice recognition.",
+          duration: 5000,
+        });
+        hasShownSupportWarning.current = true;
+      }
     }
     
     // Clean up on component unmount
@@ -108,6 +122,8 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
       if (voiceRecognitionRef.current) {
         try {
           voiceRecognitionRef.current.start();
+          
+          // Only show the toast once when activating
           toast({
             title: "Voice input activated",
             description: "Say 'Hey Trade' to start giving a command",
@@ -115,6 +131,35 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
           });
         } catch (e) {
           console.error("Error starting voice recognition:", e);
+        }
+      } else {
+        // If recognition wasn't initialized, try again
+        try {
+          voiceRecognitionRef.current = initVoiceRecognition(
+            () => {
+              setWakeWordDetected(true);
+              setIsWaitingForCommand(true);
+            },
+            (transcript) => {
+              setIsWaitingForCommand(false);
+              if (transcript && transcript.trim().length > 0) {
+                onSpeechResult(transcript);
+              }
+            },
+            () => {
+              setIsListening(true);
+            },
+            () => {
+              setIsListening(false);
+              setIsWaitingForCommand(false);
+            }
+          );
+          
+          if (voiceRecognitionRef.current) {
+            voiceRecognitionRef.current.start();
+          }
+        } catch (error) {
+          console.error("Error re-initializing voice recognition:", error);
         }
       }
     }
