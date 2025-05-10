@@ -1,7 +1,7 @@
 
 // Controller for managing avatar emotions and expressions
 
-export type AvatarEmotion = "neutral" | "confident" | "thinking" | "happy";
+export type AvatarEmotion = "neutral" | "confident" | "thinking" | "happy" | "surprised" | "concerned";
 export type AvatarStatus = "idle" | "listening" | "speaking";
 
 interface EmotionConfig {
@@ -95,6 +95,9 @@ export class EmotionController {
           { name: "eyes_wide", value: 0.2 * intensity },
           { name: "head_up", value: 0.4 * intensity },
           { name: "mouth_smile", value: 0.7 * intensity },
+          { name: "mouth_width", value: 0.6 * intensity }, // Wider smile
+          { name: "cheeks_up", value: 0.5 * intensity }, // Business-like confidence
+          { name: "tie_adjustment", value: 0.2 * intensity }, // Subtle tie adjustment
         ];
         break;
       case "thinking":
@@ -104,6 +107,7 @@ export class EmotionController {
           { name: "head_tilt", value: 0.6 * intensity },
           { name: "mouth_narrow", value: 0.4 * intensity },
           { name: "eyes_squint", value: 0.3 * intensity },
+          { name: "mouth_pout", value: 0.2 * intensity }, // Thoughtful pout
         ];
         break;
       case "happy":
@@ -113,6 +117,24 @@ export class EmotionController {
           { name: "cheeks_up", value: 0.7 * intensity },
           { name: "nose_wrinkle", value: 0.2 * intensity },
           { name: "eyebrows_up", value: 0.4 * intensity },
+          { name: "mouth_open", value: 0.2 * intensity }, // Slightly open mouth for happy expression
+          { name: "eyes_sparkle", value: 0.6 * intensity }, // Sparkling eyes
+        ];
+        break;
+      case "surprised":
+        this.expressionBlendshapes = [
+          { name: "eyebrows_up", value: 0.9 * intensity },
+          { name: "eyes_wide", value: 0.8 * intensity },
+          { name: "mouth_open", value: 0.7 * intensity },
+          { name: "head_back", value: 0.3 * intensity },
+        ];
+        break;
+      case "concerned":
+        this.expressionBlendshapes = [
+          { name: "eyebrows_inner_up", value: 0.7 * intensity },
+          { name: "mouth_corners_down", value: 0.5 * intensity },
+          { name: "head_forward", value: 0.3 * intensity },
+          { name: "eyes_squint", value: 0.4 * intensity },
         ];
         break;
       default: // neutral
@@ -120,6 +142,8 @@ export class EmotionController {
           { name: "reset", value: 1.0 },
           { name: "blink_rate", value: 0.2 + Math.random() * 0.1 }, // Random blink rate
           { name: "micro_movement", value: 0.2 * intensity }, // Subtle movements
+          { name: "mouth_slight_smile", value: 0.3 * intensity }, // Default friendly expression
+          { name: "business_posture", value: 1.0 }, // Professional posture
         ];
     }
   }
@@ -222,9 +246,36 @@ export class EmotionController {
         lowerText.includes("calculate")) {
       return this.setEmotion("thinking", { duration: 3 });
     }
+
+    // New emotion triggers for business context
+    if (lowerText.includes("market crash") ||
+        lowerText.includes("recession") ||
+        lowerText.includes("bear market") ||
+        lowerText.includes("downtrend")) {
+      return this.setEmotion("concerned", { duration: 3 });
+    }
+
+    if (lowerText.includes("breaking news") ||
+        lowerText.includes("unexpected") ||
+        lowerText.includes("announcement") ||
+        lowerText.includes("sudden")) {
+      return this.setEmotion("surprised", { duration: 2.5 });
+    }
     
     // Default - return to neutral
     return this;
+  }
+
+  // New method to handle business-themed reactions
+  public handleBusinessEvent(event: string, impact: 'positive' | 'neutral' | 'negative') {
+    switch(impact) {
+      case 'positive':
+        return this.setEmotion("happy", { duration: 2, intensity: 0.8 });
+      case 'negative':
+        return this.setEmotion("concerned", { duration: 2, intensity: 0.7 });
+      default:
+        return this.setEmotion("neutral", { duration: 1, intensity: 0.5 });
+    }
   }
 }
 

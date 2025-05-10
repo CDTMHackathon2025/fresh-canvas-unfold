@@ -29,6 +29,10 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
   const eyebrowRightRef = useRef<THREE.Mesh>(null);
   const cheekLeftRef = useRef<THREE.Mesh>(null);
   const cheekRightRef = useRef<THREE.Mesh>(null);
+  // New business suit elements
+  const suitCollarRef = useRef<THREE.Mesh>(null);
+  const suitTorsoRef = useRef<THREE.Mesh>(null);
+  const tieRef = useRef<THREE.Mesh>(null);
 
   // Animation timers and state
   const blinkTime = useRef(Math.random() * 5);
@@ -108,12 +112,16 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         mouthRef.current.scale.y = 1 + mouthOpenness.current;
         
         // Create mouth curve for expressions
-        if (emotion === "happy" && !mouthOpenness.current) {
+        if (emotion === "happy") {
           mouthRef.current.rotation.z = 0.2; // Smile
+          // Wider smile when happy
+          mouthRef.current.scale.x = 1.2;
         } else if (emotion === "thinking" && !mouthOpenness.current) {
           mouthRef.current.rotation.z = -0.1; // Slight frown
+          mouthRef.current.scale.x = 0.9; 
         } else {
           mouthRef.current.rotation.z = Math.sin(time * 0.5) * 0.05; // Subtle movement
+          mouthRef.current.scale.x = 1.0;
         }
       }
       
@@ -166,8 +174,10 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         // Subtle smile/expression based on emotion
         if (emotion === "happy") {
           mouthRef.current.rotation.z = 0.1 + Math.sin(time * 0.5) * 0.02;
+          mouthRef.current.scale.x = 1.15; // Wider smile in idle
         } else if (emotion === "thinking") {
           mouthRef.current.rotation.z = -0.05 + Math.sin(time * 0.3) * 0.01;
+          mouthRef.current.scale.x = 0.95; // Slightly narrower when thinking
         }
       }
     }
@@ -213,6 +223,11 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
     const breathValue = Math.sin(breathPhase.current);
     if (groupRef.current) {
       groupRef.current.scale.y = 1 + breathValue * 0.01;
+    }
+    
+    // Suit elements subtle movement with breathing
+    if (suitTorsoRef.current) {
+      suitTorsoRef.current.scale.y = 1 + breathValue * 0.01;
     }
     
     // Cheek movement for expressions
@@ -371,13 +386,13 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         />
       </mesh>
       
-      {/* Enhanced mouth for better speech animation */}
+      {/* Enhanced mouth for better speech animation - wider and more expressive */}
       <mesh 
         ref={mouthRef}
         position={[0, -0.3, 1.2]} 
         rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.1 : 0]}
       >
-        <boxGeometry args={[0.8, 0.15, 0.1]} />
+        <boxGeometry args={[1.0, 0.2, 0.1]} />
         <meshStandardMaterial 
           color="#d35400" 
           roughness={0.7}
@@ -414,6 +429,39 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         <sphereGeometry args={[0.05, 8, 8]} />
         <meshBasicMaterial color="white" opacity={0.7} transparent={true} />
       </mesh>
+
+      {/* NEW: Business suit elements - collar */}
+      <mesh ref={suitCollarRef} position={[0, -1.5, 0.5]}>
+        <cylinderGeometry args={[1.55, 1.7, 0.5, 32, 1, true]} />
+        <meshStandardMaterial 
+          color="#2c3e50" 
+          side={THREE.DoubleSide}
+          roughness={0.8}
+          metalness={0.1}
+        />
+      </mesh>
+
+      {/* NEW: Business suit elements - torso/body */}
+      <mesh ref={suitTorsoRef} position={[0, -2.5, 0]}>
+        <cylinderGeometry args={[1.7, 1.5, 2.0, 32]} />
+        <meshStandardMaterial 
+          color="#34495e" 
+          roughness={0.9}
+          metalness={0.1}
+        />
+      </mesh>
+
+      {/* NEW: Business tie */}
+      <group position={[0, -1.7, 1.2]}>
+        <mesh>
+          <boxGeometry args={[0.3, 0.7, 0.05]} />
+          <meshStandardMaterial color="#e74c3c" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, -0.5, 0]}>
+          <boxGeometry args={[0.2, 0.4, 0.05]} />
+          <meshStandardMaterial color="#c0392b" roughness={0.6} />
+        </mesh>
+      </group>
       
       {/* Add subtle glow/halo when active */}
       {(status === "listening" || status === "speaking") && (

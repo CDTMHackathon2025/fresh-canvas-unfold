@@ -6,7 +6,7 @@ import { createEmotionController, AvatarEmotion } from './EmotionController';
 interface Avatar3DProps {
   status: "idle" | "listening" | "speaking";
   size?: "sm" | "md" | "lg" | "xl";
-  emotion?: "neutral" | "confident" | "thinking" | "happy";
+  emotion?: "neutral" | "confident" | "thinking" | "happy" | "surprised" | "concerned";
 }
 
 const Avatar3D: React.FC<Avatar3DProps> = ({ 
@@ -14,7 +14,7 @@ const Avatar3D: React.FC<Avatar3DProps> = ({
   size = "md",
   emotion = "neutral"
 }) => {
-  // Size mapping
+  // Size mapping - now with larger options
   const sizeMap = {
     sm: "h-24 w-24",
     md: "h-36 w-36",

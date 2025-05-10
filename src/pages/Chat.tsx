@@ -94,14 +94,14 @@ const Chat = () => {
     <div className="flex flex-col min-h-screen relative animate-fade-in">
       <Header activeTab="Hey Trade" onTabChange={() => {}} showTabs={false} />
       
-      {/* Changed top padding from pt-16 to pt-20 and added mt-4 to increase space at the top */}
-      <main className="flex-1 flex flex-col pt-20 mt-4 pb-28">
-        {/* Avatar section - We're replacing AnimatedAvatar with our new Avatar3D */}
-        <div className="flex justify-center py-3 sticky top-16 z-10 bg-black/40 backdrop-blur-sm">
+      {/* Increased top padding from pt-20 to pt-24 and increased mt-4 to mt-6 */}
+      <main className="flex-1 flex flex-col pt-24 mt-6 pb-28">
+        {/* Avatar section with more space */}
+        <div className="flex justify-center py-4 sticky top-16 z-10 bg-black/40 backdrop-blur-sm">
           <Avatar3D 
             status={avatarStatus} 
             emotion={avatarEmotion} 
-            size="md" 
+            size="lg" 
           />
           
           {/* Display speech recognition not supported message */}
