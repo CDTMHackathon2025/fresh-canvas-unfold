@@ -10,6 +10,20 @@ declare global {
       mesh: ReactThreeFiber.Object3DNode<THREE.Mesh, typeof THREE.Mesh>
       sphereGeometry: ReactThreeFiber.BufferGeometryNode<THREE.SphereGeometry, typeof THREE.SphereGeometry>
       boxGeometry: ReactThreeFiber.BufferGeometryNode<THREE.BoxGeometry, typeof THREE.BoxGeometry>
+      cylinderGeometry: ReactThreeFiber.BufferGeometryNode<THREE.CylinderGeometry, typeof THREE.CylinderGeometry>
+      ringGeometry: ReactThreeFiber.BufferGeometryNode<THREE.RingGeometry, typeof THREE.RingGeometry>
+      ellipsoidGeometry: ReactThreeFiber.BufferGeometryNode<THREE.SphereGeometry, typeof THREE.SphereGeometry>
+      ellipseCurve: ReactThreeFiber.Node<THREE.EllipseCurve, typeof THREE.EllipseCurve> & {
+        asGeometry: boolean,
+        extrudeGeometry?: {
+          steps: number,
+          depth: number,
+          bevelEnabled: boolean,
+          bevelThickness: number,
+          bevelSize: number,
+          bevelSegments: number
+        }
+      }
       meshStandardMaterial: ReactThreeFiber.MaterialNode<THREE.MeshStandardMaterial, typeof THREE.MeshStandardMaterial>
       meshBasicMaterial: ReactThreeFiber.MaterialNode<THREE.MeshBasicMaterial, typeof THREE.MeshBasicMaterial>
       ambientLight: ReactThreeFiber.LightNode<THREE.AmbientLight, typeof THREE.AmbientLight>

@@ -30,10 +30,23 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
   const eyebrowRightRef = useRef<THREE.Mesh>(null);
   const cheekLeftRef = useRef<THREE.Mesh>(null);
   const cheekRightRef = useRef<THREE.Mesh>(null);
-  // New business suit elements
+  // Business suit elements
   const suitCollarRef = useRef<THREE.Mesh>(null);
   const suitTorsoRef = useRef<THREE.Mesh>(null);
   const tieRef = useRef<THREE.Mesh>(null);
+  
+  // NEW: Hair & facial details
+  const hairRef = useRef<THREE.Group>(null);
+  const earsRef = useRef<THREE.Group>(null);
+  const neckRef = useRef<THREE.Mesh>(null);
+  
+  // Enhanced materials states
+  const [headMaterial] = useState(() => new THREE.MeshStandardMaterial({
+    color: 0xffe0bd, // Skin tone
+    roughness: 0.5,
+    metalness: 0.1,
+    envMapIntensity: 1.0
+  }));
 
   // Animation timers and state
   const blinkTime = useRef(Math.random() * 5);
@@ -148,15 +161,6 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         mouthRef.current.scale.y = 0.8 + Math.sin(time * 3) * 0.05;
       }
       
-      // Nose subtly glows when processing
-      if (noseRef.current && noseRef.current.material) {
-        (noseRef.current.material as THREE.MeshStandardMaterial).emissive = 
-          new THREE.Color(0x333333).lerp(
-            new THREE.Color(getEmotionColor()), 
-            0.2 + Math.sin(time * 2) * 0.1
-          );
-      }
-      
     } else {
       // Idle animation - subtle natural breathing and occasional head movements
       groupRef.current.position.y = Math.sin(time * microMovements.breathFreq) * microMovements.breathDepth;
@@ -242,6 +246,12 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       }
     }
     
+    // Hair subtle movement (if exists)
+    if (hairRef.current) {
+      hairRef.current.position.y = Math.sin(time * 0.3) * 0.005;
+      hairRef.current.rotation.z = Math.sin(time * 0.4) * 0.01;
+    }
+    
     // Micro-expressions based on emotion and timing
     // Randomly trigger micro-expressions during idle time
     if (time - microExpressionState.current.lastChange > 5 && Math.random() > 0.997) {
@@ -266,6 +276,23 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       case "thinking": return 0x9b59b6;
       case "happy": return 0x2ecc71;
       default: return 0x3498db;
+    }
+  };
+  
+  // Get skin tone color with subtle variation based on emotion
+  const getSkinTone = () => {
+    const baseSkinTone = new THREE.Color(0xffe0bd);  // Base skin tone
+    
+    // Slightly modify skin tone based on emotion (subtle effect)
+    switch(emotion) {
+      case "happy": 
+        return baseSkinTone.lerp(new THREE.Color(0xffd6a5), 0.3); // Warmer
+      case "thinking": 
+        return baseSkinTone.lerp(new THREE.Color(0xf0e0d6), 0.2); // Slightly cooler
+      case "concerned":
+        return baseSkinTone.lerp(new THREE.Color(0xf5d7c6), 0.2); // Paler
+      default:
+        return baseSkinTone;
     }
   };
   
@@ -312,110 +339,214 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
           mouthRef.current.rotation.z = 0;
         }
     }
+    
+    // Update head material color based on emotion
+    if (headRef.current && headRef.current.material) {
+      (headRef.current.material as THREE.MeshStandardMaterial).color = getSkinTone();
+    }
+    
   }, [emotion]);
+
+  // Create more realistic ear shapes
+  const createEar = (side: 'left' | 'right') => {
+    const xPos = side === 'left' ? 0.9 : -0.9;
+    return (
+      <group position={[xPos, 0, 0]} rotation={[0, side === 'left' ? -Math.PI/2 : Math.PI/2, 0]}>
+        <mesh>
+          <ellipseCurve 
+            args={[0, 0, 0.3, 0.5, 0, 2 * Math.PI, false, 0]} 
+            asGeometry={true}
+            extrudeGeometry={{
+              steps: 1,
+              depth: 0.1,
+              bevelEnabled: true,
+              bevelThickness: 0.1,
+              bevelSize: 0.1,
+              bevelSegments: 3
+            }}
+          />
+          <meshStandardMaterial color={getSkinTone()} />
+        </mesh>
+      </group>
+    );
+  };
 
   return (
     <group ref={groupRef}>
-      {/* Head - main sphere */}
+      {/* Enhanced head with better shape and skin material */}
       <mesh ref={headRef}>
         <sphereGeometry args={[1.5, 32, 32]} />
         <meshStandardMaterial 
-          color={getEmotionColor()}
+          color={getSkinTone()}
           roughness={0.7}
-          metalness={0.2}
-          // Add subsurface scattering-like effect
+          metalness={0.1}
           envMapIntensity={1.2}
         />
       </mesh>
       
-      {/* Eyes with more detail and reflections */}
+      {/* NEW: Neck */}
+      <mesh ref={neckRef} position={[0, -1.8, 0]}>
+        <cylinderGeometry args={[0.7, 0.8, 1.0, 16]} />
+        <meshStandardMaterial 
+          color={getSkinTone()}
+          roughness={0.7}
+          metalness={0.1}
+        />
+      </mesh>
+      
+      {/* NEW: Ears */}
+      <group ref={earsRef}>
+        {/* Left ear */}
+        <mesh position={[1.4, 0.1, 0]} rotation={[0, Math.PI/2, 0]}>
+          <ellipsoidGeometry args={[0.2, 0.4, 0.15]} />
+          <meshStandardMaterial color={getSkinTone()} />
+        </mesh>
+        
+        {/* Right ear */}
+        <mesh position={[-1.4, 0.1, 0]} rotation={[0, -Math.PI/2, 0]}>
+          <ellipsoidGeometry args={[0.2, 0.4, 0.15]} />
+          <meshStandardMaterial color={getSkinTone()} />
+        </mesh>
+      </group>
+      
+      {/* NEW: More detailed hair */}
+      <group ref={hairRef}>
+        {/* Main hair mass */}
+        <mesh position={[0, 0.8, 0]}>
+          <sphereGeometry args={[1.53, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          <meshStandardMaterial 
+            color={0x3a3a3a}  // Dark hair color
+            roughness={0.9}
+            metalness={0.1}
+          />
+        </mesh>
+        
+        {/* Hair front */}
+        <mesh position={[0, 0.7, 1.2]} rotation={[Math.PI * 0.1, 0, 0]}>
+          <boxGeometry args={[1.8, 0.4, 0.3]} />
+          <meshStandardMaterial 
+            color={0x3a3a3a}
+            roughness={0.9}
+          />
+        </mesh>
+      </group>
+      
+      {/* Enhanced eyes with better details */}
       <mesh ref={eyeLeftRef} position={[0.5, 0.3, 1.2]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.22, 24, 24]} />
         <meshStandardMaterial 
           color="white" 
-          roughness={0.2}
+          roughness={0.1}
+          metalness={0.1}
           envMapIntensity={1.5}
         />
       </mesh>
       <mesh ref={eyeRightRef} position={[-0.5, 0.3, 1.2]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.22, 24, 24]} />
         <meshStandardMaterial 
           color="white" 
-          roughness={0.2}
+          roughness={0.1}
+          metalness={0.1}
           envMapIntensity={1.5}
         />
       </mesh>
       
-      {/* Pupils with reflections */}
-      <mesh ref={pupilLeftRef} position={[0.5, 0.3, 1.4]}>
-        <sphereGeometry args={[0.1, 16, 16]} />
-        <meshStandardMaterial 
-          color="black" 
-          metalness={0.5}
-          roughness={0.2}
-          envMapIntensity={2}
-        />
+      {/* Iris and Pupils with more detail */}
+      <group position={[0.5, 0.3, 1.35]}>
+        <mesh>
+          <ringGeometry args={[0.08, 0.14, 24]} />
+          <meshStandardMaterial color="#5a7b9c" metalness={0.1} roughness={0.6} />
+        </mesh>
+        <mesh ref={pupilLeftRef}>
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshStandardMaterial 
+            color="black" 
+            metalness={0.5}
+            roughness={0.2}
+            envMapIntensity={2}
+          />
+        </mesh>
+      </group>
+      <group position={[-0.5, 0.3, 1.35]}>
+        <mesh>
+          <ringGeometry args={[0.08, 0.14, 24]} />
+          <meshStandardMaterial color="#5a7b9c" metalness={0.1} roughness={0.6} />
+        </mesh>
+        <mesh ref={pupilRightRef}>
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshStandardMaterial 
+            color="black" 
+            metalness={0.5}
+            roughness={0.2}
+            envMapIntensity={2}
+          />
+        </mesh>
+      </group>
+      
+      {/* Enhanced eyebrows with better shape */}
+      <mesh ref={eyebrowLeftRef} position={[0.5, 0.6, 1.3]} rotation={[0.1, 0, 0.1]}>
+        <boxGeometry args={[0.3, 0.06, 0.08]} />
+        <meshStandardMaterial color="#2a2a2a" />
       </mesh>
-      <mesh ref={pupilRightRef} position={[-0.5, 0.3, 1.4]}>
-        <sphereGeometry args={[0.1, 16, 16]} />
-        <meshStandardMaterial 
-          color="black" 
-          metalness={0.5}
-          roughness={0.2}
-          envMapIntensity={2}
-        />
+      <mesh ref={eyebrowRightRef} position={[-0.5, 0.6, 1.3]} rotation={[0.1, 0, -0.1]}>
+        <boxGeometry args={[0.3, 0.06, 0.08]} />
+        <meshStandardMaterial color="#2a2a2a" />
       </mesh>
       
-      {/* New: Eyebrows for expression */}
-      <mesh ref={eyebrowLeftRef} position={[0.5, 0.5, 1.3]} rotation={[0, 0, 0.1]}>
-        <boxGeometry args={[0.25, 0.05, 0.05]} />
-        <meshStandardMaterial color="#333333" />
-      </mesh>
-      <mesh ref={eyebrowRightRef} position={[-0.5, 0.5, 1.3]} rotation={[0, 0, -0.1]}>
-        <boxGeometry args={[0.25, 0.05, 0.05]} />
-        <meshStandardMaterial color="#333333" />
-      </mesh>
-      
-      {/* New: Nose */}
-      <mesh ref={noseRef} position={[0, 0, 1.4]}>
-        <sphereGeometry args={[0.15, 16, 16]} />
+      {/* More refined nose */}
+      <mesh ref={noseRef} position={[0, 0, 1.45]}>
+        <sphereGeometry args={[0.18, 16, 16]} />
         <meshStandardMaterial 
-          color={new THREE.Color(getEmotionColor()).multiplyScalar(0.7).getHex()}
-          emissive={new THREE.Color(getEmotionColor()).multiplyScalar(0.1).getHex()}
+          color={getSkinTone()}
           roughness={0.6}
-          metalness={0.2}
         />
       </mesh>
-      
-      {/* Enhanced mouth for better speech animation - wider and more expressive */}
-      <mesh 
-        ref={mouthRef}
-        position={[0, -0.3, 1.2]} 
-        rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.1 : 0]}
-      >
-        <boxGeometry args={[1.0, 0.2, 0.1]} />
-        <meshStandardMaterial 
-          color="#d35400" 
-          roughness={0.7}
-          emissive={new THREE.Color(getEmotionColor()).multiplyScalar(0.1).getHex()}
-        />
+      {/* Nose bridge */}
+      <mesh position={[0, 0.15, 1.4]}>
+        <boxGeometry args={[0.12, 0.3, 0.1]} />
+        <meshStandardMaterial color={getSkinTone()} />
       </mesh>
       
-      {/* New: Cheek highlights for expressions */}
+      {/* Enhanced mouth for better speech animation */}
+      <group position={[0, -0.4, 1.25]}>
+        <mesh 
+          ref={mouthRef}
+          rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.1 : 0]}
+        >
+          <boxGeometry args={[0.8, 0.15, 0.1]} />
+          <meshStandardMaterial 
+            color="#d35400" 
+            roughness={0.7}
+            emissive={new THREE.Color(getEmotionColor()).multiplyScalar(0.05).getHex()}
+          />
+        </mesh>
+        
+        {/* Lips */}
+        <mesh position={[0, 0.08, 0]} rotation={[0.1, 0, 0]}>
+          <boxGeometry args={[0.85, 0.05, 0.12]} />
+          <meshStandardMaterial color="#c0392b" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, -0.08, 0]} rotation={[-0.1, 0, 0]}>
+          <boxGeometry args={[0.85, 0.04, 0.12]} />
+          <meshStandardMaterial color="#aa3326" roughness={0.6} />
+        </mesh>
+      </group>
+      
+      {/* Cheek highlights for expressions */}
       <mesh ref={cheekLeftRef} position={[0.7, -0.1, 1.0]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.25, 16, 16]} />
         <meshStandardMaterial 
-          color={new THREE.Color(getEmotionColor()).multiplyScalar(1.1).getHex()}
-          opacity={0.3}
+          color={new THREE.Color(getSkinTone()).multiplyScalar(1.05).getHex()}
+          opacity={0.5}
           transparent={true}
           roughness={0.5}
         />
       </mesh>
       <mesh ref={cheekRightRef} position={[-0.7, -0.1, 1.0]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.25, 16, 16]} />
         <meshStandardMaterial 
-          color={new THREE.Color(getEmotionColor()).multiplyScalar(1.1).getHex()}
-          opacity={0.3}
+          color={new THREE.Color(getSkinTone()).multiplyScalar(1.05).getHex()}
+          opacity={0.5}
           transparent={true}
           roughness={0.5}
         />
@@ -431,7 +562,7 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         <meshBasicMaterial color="white" opacity={0.7} transparent={true} />
       </mesh>
 
-      {/* NEW: Business suit elements - collar */}
+      {/* Business suit collar - enhanced shape */}
       <mesh ref={suitCollarRef} position={[0, -1.5, 0.5]}>
         <cylinderGeometry args={[1.55, 1.7, 0.5, 32, 1, true]} />
         <meshStandardMaterial 
@@ -442,7 +573,7 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         />
       </mesh>
 
-      {/* NEW: Business suit elements - torso/body */}
+      {/* Business suit torso */}
       <mesh ref={suitTorsoRef} position={[0, -2.5, 0]}>
         <cylinderGeometry args={[1.7, 1.5, 2.0, 32]} />
         <meshStandardMaterial 
@@ -452,19 +583,42 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         />
       </mesh>
 
-      {/* NEW: Business tie */}
+      {/* Enhanced business tie with more detail */}
       <group position={[0, -1.7, 1.2]}>
-        <mesh>
-          <boxGeometry args={[0.3, 0.7, 0.05]} />
+        {/* Knot */}
+        <mesh position={[0, 0.1, 0]}>
+          <boxGeometry args={[0.35, 0.25, 0.1]} />
+          <meshStandardMaterial color="#c0392b" roughness={0.6} />
+        </mesh>
+        {/* Upper tie */}
+        <mesh position={[0, -0.15, 0]} rotation={[0, 0, 0]}>
+          <cylinderGeometry args={[0.18, 0.12, 0.4, 4, 1, false]} />
           <meshStandardMaterial color="#e74c3c" roughness={0.6} />
         </mesh>
-        <mesh position={[0, -0.5, 0]}>
-          <boxGeometry args={[0.2, 0.4, 0.05]} />
+        {/* Lower tie */}
+        <mesh position={[0, -0.6, 0]} rotation={[0, 0, 0]}>
+          <cylinderGeometry args={[0.12, 0.18, 0.5, 4, 1, false]} />
           <meshStandardMaterial color="#c0392b" roughness={0.6} />
+        </mesh>
+        
+        {/* Tie pin */}
+        <mesh position={[0, -0.3, 0.06]} rotation={[0, 0, Math.PI/4]}>
+          <boxGeometry args={[0.15, 0.02, 0.01]} />
+          <meshStandardMaterial color="#f1c40f" metalness={0.8} roughness={0.2} />
         </mesh>
       </group>
       
-      {/* Add subtle glow/halo when active */}
+      {/* Jacket lapels */}
+      <mesh position={[0.7, -1.5, 1.0]} rotation={[0, -0.3, 0]}>
+        <boxGeometry args={[0.2, 1.0, 0.1]} />
+        <meshStandardMaterial color="#1f2c39" roughness={0.8} />
+      </mesh>
+      <mesh position={[-0.7, -1.5, 1.0]} rotation={[0, 0.3, 0]}>
+        <boxGeometry args={[0.2, 1.0, 0.1]} />
+        <meshStandardMaterial color="#1f2c39" roughness={0.8} />
+      </mesh>
+      
+      {/* Subtle glow/halo when active */}
       {(status === "listening" || status === "speaking") && (
         <mesh position={[0, 0, -0.2]} rotation={[0, 0, 0]}>
           <ringGeometry args={[1.8, 2.0, 32]} />
@@ -503,6 +657,9 @@ const Lights: React.FC = () => {
       
       {/* Soft fill light */}
       <pointLight position={[-2, 1, 4]} intensity={0.4} color="#fff5e6" />
+      
+      {/* Additional highlight for eyes and face */}
+      <pointLight position={[0, 0.3, 3]} intensity={0.2} color="#ffffff" />
     </>
   );
 };
