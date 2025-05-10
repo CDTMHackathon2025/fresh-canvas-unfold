@@ -28,6 +28,9 @@ interface OpenAIErrorResponse {
   };
 }
 
+// Actual API key for OpenAI service
+const API_KEY = "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";
+
 // Fallback message when API is unavailable
 const FALLBACK_MESSAGES = [
   "I'm sorry, but I'm unable to connect to my knowledge base right now. Let me provide some general information based on what I already know.",
@@ -39,10 +42,10 @@ const FALLBACK_MESSAGES = [
 
 export const sendMessageToOpenAI = async (
   message: string, 
-  apiKey: string,
+  apiKey: string = API_KEY,
   systemPrompt?: string
 ): Promise<string> => {
-  // If the API key has quota issues, use the fallback messages
+  // Check if the API key has suffix indicating quota issues
   if (apiKey && apiKey.includes("insufficient_quota")) {
     console.log("Using fallback message due to previous quota issues");
     return getFallbackResponse(message);
