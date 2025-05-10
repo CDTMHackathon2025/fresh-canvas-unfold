@@ -14,6 +14,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
   const permissionDeniedRef = useRef(false);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initializationAttempted = useRef(false);
+  const lastRecognizedSpeech = useRef<string | null>(null);
 
   // Function to check if speech recognition is supported
   const checkSpeechRecognitionSupport = useCallback(() => {
@@ -68,6 +69,35 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     }
   }, []);
 
+  // Enhanced speech result handler to prevent duplicate processing
+  const handleSpeechResult = useCallback((transcript: string) => {
+    console.log("Speech result received in hook:", transcript);
+    
+    if (!transcript || transcript.trim().length < 2) {
+      console.log("Ignoring empty transcript");
+      return;
+    }
+    
+    // Deduplicate identical speech inputs that might come from multiple events
+    if (lastRecognizedSpeech.current === transcript) {
+      console.log("Ignoring duplicate speech input");
+      return;
+    }
+    
+    lastRecognizedSpeech.current = transcript;
+    
+    // Process the speech result
+    console.log("Processing speech result:", transcript);
+    onSpeechResult(transcript);
+    
+    // Reset last recognized speech after a delay to allow for new similar inputs
+    setTimeout(() => {
+      if (lastRecognizedSpeech.current === transcript) {
+        lastRecognizedSpeech.current = null;
+      }
+    }, 5000);
+  }, [onSpeechResult]);
+
   // Initialize speech recognition with improved error handling
   const initializeSpeechRecognition = useCallback(async () => {
     if (initializationAttempted.current) return;
@@ -97,15 +127,8 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
             duration: 3000,
           });
         },
-        // Speech result received
-        (transcript) => {
-          console.log("Speech result received:", transcript);
-          setWakeWordDetected(false);
-          setIsWaitingForCommand(false);
-          if (transcript && transcript.trim().length > 0) {
-            onSpeechResult(transcript);
-          }
-        },
+        // Speech result received - use enhanced handler
+        handleSpeechResult,
         // Listening started
         () => {
           console.log("Voice listening started");
@@ -138,7 +161,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
         hasShownSupportWarning.current = true;
       }
     }
-  }, [checkSpeechRecognitionSupport, hasRequestedPermission, onSpeechResult, requestMicrophonePermission]);
+  }, [checkSpeechRecognitionSupport, hasRequestedPermission, handleSpeechResult, requestMicrophonePermission]);
 
   // Initialize on component mount with better cleanup
   useEffect(() => {

@@ -147,12 +147,14 @@ export const initVoiceRecognition = (
     let isListeningForCommand = false;
     let commandTimeout: NodeJS.Timeout | null = null;
     let lastTranscript = '';
+    let fullCommand = ''; // Store the complete command
     let hasErrored = false;
     let recognitionRestartCount = 0;
     let isListeningActive = true; // Track if we actually want to be listening
     let isProcessingSpeech = false; // Track if we're currently processing speech
+    let accumulatedTranscript = ''; // Accumulate transcript over multiple segments
     
-    // Handle results with improved wake word detection and command completion
+    // Handle results with improved wake word detection and command accumulation
     recognition.onresult = (event: any) => {
       console.log("Speech recognition result received", { 
         results: event.results.length, 
@@ -186,17 +188,19 @@ export const initVoiceRecognition = (
           console.log("Wake word detected in:", transcript);
           isListeningForCommand = true;
           lastTranscript = '';
+          accumulatedTranscript = ''; // Reset accumulated transcript
+          fullCommand = ''; // Reset full command
           onWakeWordDetected();
           isProcessingSpeech = true;
           
           // Reset after timeout if no further input received
           if (commandTimeout) clearTimeout(commandTimeout);
           commandTimeout = setTimeout(() => {
-            console.log("Command timeout reached - ending command mode");
+            console.log("Command timeout reached with no further input");
             isListeningForCommand = false;
             isProcessingSpeech = false;
             onListeningEnd();
-          }, 8000); // 8 seconds to complete command
+          }, 10000); // 10 seconds to complete command
         }
       } 
       // Command mode - already listening for a command
@@ -215,56 +219,66 @@ export const initVoiceRecognition = (
           return;
         }
         
-        // Final result - ready to process command
+        // If this is a continued transcript, accumulate it
         if (latestResult.isFinal) {
-          console.log("Final result received:", transcript);
-          // This is a final result, capture it
-          lastTranscript = transcript;
+          console.log("Final result received for command:", transcript);
           
-          // Only process if we have meaningful content
-          if (lastTranscript.trim().length > 3) {
-            console.log("Processing final command:", lastTranscript);
-            // Clear any existing timeout
-            if (commandTimeout) clearTimeout(commandTimeout);
+          // Remove any wake word phrases from the transcript
+          let cleanedTranscript = transcript;
+          const wakeWordVariations = ["hey trade", "hey tray", "trade"];
+          for (const wakeWord of wakeWordVariations) {
+            cleanedTranscript = cleanedTranscript.replace(new RegExp(wakeWord, 'i'), '').trim();
+          }
+          
+          // Only add to accumulation if it has content
+          if (cleanedTranscript.length > 0) {
+            // If we're getting content, add it to accumulation
+            if (accumulatedTranscript.length > 0) {
+              accumulatedTranscript += " " + cleanedTranscript;
+            } else {
+              accumulatedTranscript = cleanedTranscript;
+            }
             
-            // Set a short timeout to allow for any additional speech segments
-            commandTimeout = setTimeout(() => {
-              console.log("Command complete - sending result:", lastTranscript);
-              isListeningForCommand = false;
-              isProcessingSpeech = false;
-              onListeningEnd();
-              onSpeechResult(lastTranscript);
-            }, 1000); // 1 second grace period
-          } else {
-            // Reset the timeout for short results that might not be complete
+            console.log("Accumulated transcript so far:", accumulatedTranscript);
+            
+            // Reset timeout to give more time for additional speech
             if (commandTimeout) clearTimeout(commandTimeout);
             commandTimeout = setTimeout(() => {
-              console.log("Command timeout with short input - ending command mode");
-              isListeningForCommand = false;
-              isProcessingSpeech = false;
-              onListeningEnd();
-            }, 5000); // Extended timeout for short inputs
+              // Only submit if we have reasonable content
+              if (accumulatedTranscript.length > 2) {
+                console.log("Command complete after timeout - submitting:", accumulatedTranscript);
+                fullCommand = accumulatedTranscript;
+                isListeningForCommand = false;
+                isProcessingSpeech = false;
+                onSpeechResult(fullCommand);
+              } else {
+                console.log("Command timeout with insufficient content");
+                isListeningForCommand = false;
+                isProcessingSpeech = false;
+                onListeningEnd();
+              }
+            }, 3000); // 3 second timeout after last speech
           }
         } 
         // Still speaking - extend the timeout
         else if (transcript.trim().length > 0) {
-          console.log("Extending command timeout for ongoing speech");
+          console.log("Interim result, extending timeout");
           if (commandTimeout) clearTimeout(commandTimeout);
           commandTimeout = setTimeout(() => {
             // If we have content when timeout expires, submit it
-            if (lastTranscript.trim().length > 3) {
-              console.log("Command timeout reached with content - submitting:", lastTranscript);
+            if (accumulatedTranscript.length > 2) {
+              console.log("Command timeout reached with content - submitting:", accumulatedTranscript);
+              fullCommand = accumulatedTranscript;
               isListeningForCommand = false;
               isProcessingSpeech = false;
-              onListeningEnd();
-              onSpeechResult(lastTranscript);
+              onSpeechResult(fullCommand);
             } else {
-              console.log("Command timeout reached without valid content - ending command mode");
+              console.log("Command timeout reached without valid content");
               isListeningForCommand = false;
               isProcessingSpeech = false;
               onListeningEnd();
             }
-          }, 3000); // 3 second timeout for ongoing speech
+          }, 5000); // 5 seconds for ongoing speech
         }
       }
     };
@@ -275,8 +289,19 @@ export const initVoiceRecognition = (
         hasErrored, 
         isListeningActive,
         isListeningForCommand,
-        isProcessingSpeech 
+        isProcessingSpeech,
+        accumulatedTranscript
       });
+      
+      // If we have accumulated content when recognition ends, submit it
+      if (isListeningForCommand && accumulatedTranscript.length > 2) {
+        console.log("Recognition ended with content - submitting:", accumulatedTranscript);
+        fullCommand = accumulatedTranscript;
+        isListeningForCommand = false;
+        isProcessingSpeech = false;
+        onSpeechResult(fullCommand);
+        return;
+      }
       
       // Don't restart if we had an error or if listening is deactivated
       if (hasErrored || !isListeningActive) {
@@ -377,6 +402,13 @@ export const initVoiceRecognition = (
       }
       
       // Clean up command state if needed
+      if (isListeningForCommand && accumulatedTranscript.length > 2) {
+        // If we have accumulated text, send it despite the error
+        console.log("Sending accumulated speech before handling error:", accumulatedTranscript);
+        fullCommand = accumulatedTranscript;
+        onSpeechResult(fullCommand);
+      }
+      
       if (isListeningForCommand) {
         isListeningForCommand = false;
         if (commandTimeout) clearTimeout(commandTimeout);
@@ -398,6 +430,8 @@ export const initVoiceRecognition = (
           isListeningForCommand = false;
           hasErrored = false;
           lastTranscript = '';
+          accumulatedTranscript = '';
+          fullCommand = '';
           
           if (commandTimeout) {
             clearTimeout(commandTimeout);
@@ -448,6 +482,13 @@ export const initVoiceRecognition = (
           if (commandTimeout) {
             clearTimeout(commandTimeout);
             commandTimeout = null;
+          }
+          
+          // If we have accumulated content, send it before stopping
+          if (accumulatedTranscript && accumulatedTranscript.length > 2) {
+            console.log("Sending accumulated speech before stopping:", accumulatedTranscript);
+            fullCommand = accumulatedTranscript;
+            onSpeechResult(fullCommand);
           }
           
           recognition.stop();

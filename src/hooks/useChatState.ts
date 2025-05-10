@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sendMessageToOpenAI } from "@/services/openaiService";
 import { 
@@ -42,6 +43,10 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
 
   // Reference to store the current speech instance
   const speechInstanceRef = { current: null };
+  
+  // Add a debounce timer to prevent duplicate voice submissions
+  const voiceSubmissionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastVoiceMessageRef = useRef<string | null>(null);
 
   // Toggle functions for voice and speech
   const toggleVoice = () => {
@@ -76,9 +81,14 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     });
   };
 
-  // Function to handle sending voice message
+  // Function to handle sending voice message with debounce protection
   const handleSendVoiceMessage = async (transcript: string) => {
-    if (!transcript.trim()) return;
+    if (!transcript.trim()) {
+      console.log("Empty transcript received, ignoring");
+      return;
+    }
+    
+    console.log("Voice message received:", transcript);
     
     // Check if the command is to cancel or stop
     if (
@@ -86,9 +96,28 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
       transcript.toLowerCase().includes("cancel") ||
       transcript.toLowerCase().includes("nevermind")
     ) {
+      console.log("Cancel command detected, ignoring");
       return;
     }
     
+    // Debounce: Check if this is a duplicate message sent within 5 seconds
+    if (lastVoiceMessageRef.current === transcript) {
+      console.log("Ignoring duplicate voice message");
+      return;
+    }
+    
+    // Set the last voice message and clear it after 5 seconds
+    lastVoiceMessageRef.current = transcript;
+    if (voiceSubmissionTimerRef.current) {
+      clearTimeout(voiceSubmissionTimerRef.current);
+    }
+    
+    voiceSubmissionTimerRef.current = setTimeout(() => {
+      lastVoiceMessageRef.current = null;
+    }, 5000);
+    
+    // Process the voice message
+    console.log("Processing voice message:", transcript);
     await handleSendMessage(transcript);
   };
 
@@ -96,6 +125,9 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
   const handleSendMessage = async (voiceMessage?: string) => {
     const messageText = voiceMessage || message;
     if (!messageText.trim()) return;
+
+    // Add logging for clarity
+    console.log("Sending message to chat:", voiceMessage ? "Voice: " : "Text:", messageText);
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
