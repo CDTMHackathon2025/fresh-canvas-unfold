@@ -25,6 +25,9 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
   const pupilLeftRef = useRef<THREE.Mesh>(null);
   const pupilRightRef = useRef<THREE.Mesh>(null);
   const mouthRef = useRef<THREE.Mesh>(null);
+  const mouthInnerRef = useRef<THREE.Mesh>(null);
+  const mouthTopRef = useRef<THREE.Mesh>(null);
+  const mouthBottomRef = useRef<THREE.Mesh>(null);
   const noseRef = useRef<THREE.Mesh>(null);
   const eyebrowLeftRef = useRef<THREE.Mesh>(null);
   const eyebrowRightRef = useRef<THREE.Mesh>(null);
@@ -80,7 +83,7 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
   }), []);
   
   // Syllable timing for lip sync (will be improved with actual audio analysis)
-  const syllableTiming = useRef([]);
+  const syllableTiming = useRef<number[]>([]);
   
   useFrame((state, delta) => {
     if (!groupRef.current) return;
@@ -94,7 +97,7 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       groupRef.current.rotation.x = Math.sin(time * 0.7) * 0.03;
       
       // Enhanced lip sync - more natural mouth movement
-      if (mouthRef.current) {
+      if (mouthRef.current && mouthInnerRef.current && mouthTopRef.current && mouthBottomRef.current) {
         // Simulate syllables with varying intensity
         const now = time;
         if (now - lastSyllableTime.current > 0.15 + Math.random() * 0.25) {
@@ -123,19 +126,30 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         
         // Apply mouth openness to the mesh - vary based on shape
         const mouthShape = emotion === "happy" ? 1 : (emotion === "confident" ? 0.5 : 0);
-        mouthRef.current.scale.y = 1 + mouthOpenness.current;
+        
+        // Detailed mouth movement for speech
+        mouthRef.current.scale.y = 1 + mouthOpenness.current * 0.3;
+        mouthInnerRef.current.scale.y = 1 + mouthOpenness.current * 0.8;
+        mouthTopRef.current.position.y = 0.05 + mouthOpenness.current * 0.05;
+        mouthBottomRef.current.position.y = -0.05 - mouthOpenness.current * 0.1;
         
         // Create mouth curve for expressions
         if (emotion === "happy") {
           mouthRef.current.rotation.z = 0.2; // Smile
+          mouthInnerRef.current.rotation.z = 0.2;
           // Wider smile when happy
           mouthRef.current.scale.x = 1.2;
-        } else if (emotion === "thinking" && !mouthOpenness.current) {
+          mouthInnerRef.current.scale.x = 1.2;
+        } else if (emotion === "thinking" && mouthOpenness.current < 0.1) {
           mouthRef.current.rotation.z = -0.1; // Slight frown
+          mouthInnerRef.current.rotation.z = -0.1;
           mouthRef.current.scale.x = 0.9; 
+          mouthInnerRef.current.scale.x = 0.9;
         } else {
           mouthRef.current.rotation.z = Math.sin(time * 0.5) * 0.05; // Subtle movement
+          mouthInnerRef.current.rotation.z = Math.sin(time * 0.5) * 0.05;
           mouthRef.current.scale.x = 1.0;
+          mouthInnerRef.current.scale.x = 1.0;
         }
       }
       
@@ -157,8 +171,9 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       }
       
       // Subtle mouth movement indicating attention
-      if (mouthRef.current) {
+      if (mouthRef.current && mouthInnerRef.current) {
         mouthRef.current.scale.y = 0.8 + Math.sin(time * 3) * 0.05;
+        mouthInnerRef.current.scale.y = 0.8 + Math.sin(time * 3) * 0.05;
       }
       
     } else {
@@ -172,17 +187,22 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       }
       
       // Subtle mouth movement during idle to show "presence"
-      if (mouthRef.current) {
+      if (mouthRef.current && mouthInnerRef.current) {
         // Very subtle idle mouth movement
         mouthRef.current.scale.y = 0.9 + Math.sin(time * 1.3) * microMovements.mouthIdleMovement;
+        mouthInnerRef.current.scale.y = 0.9 + Math.sin(time * 1.3) * microMovements.mouthIdleMovement;
         
         // Subtle smile/expression based on emotion
         if (emotion === "happy") {
           mouthRef.current.rotation.z = 0.1 + Math.sin(time * 0.5) * 0.02;
+          mouthInnerRef.current.rotation.z = 0.1 + Math.sin(time * 0.5) * 0.02;
           mouthRef.current.scale.x = 1.15; // Wider smile in idle
+          mouthInnerRef.current.scale.x = 1.15;
         } else if (emotion === "thinking") {
           mouthRef.current.rotation.z = -0.05 + Math.sin(time * 0.3) * 0.01;
+          mouthInnerRef.current.rotation.z = -0.05 + Math.sin(time * 0.3) * 0.01;
           mouthRef.current.scale.x = 0.95; // Slightly narrower when thinking
+          mouthInnerRef.current.scale.x = 0.95;
         }
       }
     }
@@ -321,9 +341,11 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         break;
       case "happy":
         // Raised cheeks, wide smile
-        if (mouthRef.current) {
+        if (mouthRef.current && mouthInnerRef.current) {
           mouthRef.current.scale.x = 1.2;
           mouthRef.current.rotation.z = 0.15; // Smile
+          mouthInnerRef.current.scale.x = 1.2;
+          mouthInnerRef.current.rotation.z = 0.15;
         }
         if (eyebrowLeftRef.current && eyebrowRightRef.current) {
           eyebrowLeftRef.current.position.y = 0.08;
@@ -334,9 +356,11 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
         // Reset any position changes
         groupRef.current.position.y = 0;
         groupRef.current.rotation.z = 0;
-        if (mouthRef.current) {
+        if (mouthRef.current && mouthInnerRef.current) {
           mouthRef.current.scale.x = 1;
           mouthRef.current.rotation.z = 0;
+          mouthInnerRef.current.scale.x = 1;
+          mouthInnerRef.current.rotation.z = 0;
         }
     }
     
@@ -398,13 +422,13 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       <group ref={earsRef}>
         {/* Left ear */}
         <mesh position={[1.4, 0.1, 0]} rotation={[0, Math.PI/2, 0]}>
-          <sphereGeometry args={[0.2, 0.4, 0.15]} />
+          <sphereGeometry args={[0.2, 16, 16]} />
           <meshStandardMaterial color={getSkinTone()} />
         </mesh>
         
         {/* Right ear */}
         <mesh position={[-1.4, 0.1, 0]} rotation={[0, -Math.PI/2, 0]}>
-          <sphereGeometry args={[0.2, 0.4, 0.15]} />
+          <sphereGeometry args={[0.2, 16, 16]} />
           <meshStandardMaterial color={getSkinTone()} />
         </mesh>
       </group>
@@ -509,6 +533,7 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       
       {/* Enhanced mouth for better speech animation */}
       <group position={[0, -0.4, 1.25]}>
+        {/* Outer mouth (lips) */}
         <mesh 
           ref={mouthRef}
           rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.1 : 0]}
@@ -521,12 +546,25 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
           />
         </mesh>
         
-        {/* Lips */}
-        <mesh position={[0, 0.08, 0]} rotation={[0.1, 0, 0]}>
+        {/* Inner mouth (for opening/closing) */}
+        <mesh 
+          ref={mouthInnerRef} 
+          position={[0, 0, 0.05]}
+        >
+          <boxGeometry args={[0.7, 0.12, 0.1]} />
+          <meshStandardMaterial 
+            color="#8b0000" 
+            roughness={0.8}
+            metalness={0.1}
+          />
+        </mesh>
+        
+        {/* Top and bottom lips for more detailed control */}
+        <mesh ref={mouthTopRef} position={[0, 0.08, 0]} rotation={[0.1, 0, 0]}>
           <boxGeometry args={[0.85, 0.05, 0.12]} />
           <meshStandardMaterial color="#c0392b" roughness={0.6} />
         </mesh>
-        <mesh position={[0, -0.08, 0]} rotation={[-0.1, 0, 0]}>
+        <mesh ref={mouthBottomRef} position={[0, -0.08, 0]} rotation={[-0.1, 0, 0]}>
           <boxGeometry args={[0.85, 0.04, 0.12]} />
           <meshStandardMaterial color="#aa3326" roughness={0.6} />
         </mesh>

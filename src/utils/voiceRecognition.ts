@@ -1,4 +1,3 @@
-
 // Voice recognition utility for "Hey Trade" wake word detection
 
 // Browser compatibility check - support Firefox, Safari, Chrome and Edge
@@ -83,7 +82,14 @@ const detectWakeWord = (transcript: string): boolean => {
     "hi tray",
     "okay trade",
     "ok trade",
-    "yotrade"
+    "yotrade",
+    // Add even more variations for better wake word detection
+    "a trade",
+    "trade",
+    "hey train",
+    "hey grade",
+    "hey tres",
+    "hey trey"
   ];
   
   // Check if any variation is in the transcript
@@ -126,13 +132,14 @@ export const initVoiceRecognition = (
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    recognition.maxAlternatives = 3; // Get multiple interpretation alternatives
+    recognition.maxAlternatives = 5; // Increased for better detection
     
     // Variables to track state
     let isListeningForCommand = false;
     let commandTimeout: NodeJS.Timeout | null = null;
     let lastTranscript = '';
     let hasErrored = false;
+    let recognitionRestartCount = 0;
     
     // Handle results with improved wake word detection
     recognition.onresult = (event: any) => {
@@ -143,7 +150,17 @@ export const initVoiceRecognition = (
       
       // Wake word detection with enhanced sensitivity
       if (!isListeningForCommand) {
-        if (detectWakeWord(transcript)) {
+        // Check all alternatives for wake word to improve detection
+        let wakeWordFound = false;
+        for (let i = 0; i < Math.min(latestResult.length, 5); i++) {
+          const alternativeTranscript = latestResult[i]?.transcript || "";
+          if (detectWakeWord(alternativeTranscript)) {
+            wakeWordFound = true;
+            break;
+          }
+        }
+        
+        if (wakeWordFound || detectWakeWord(transcript)) {
           console.log("Wake word detected in:", transcript);
           isListeningForCommand = true;
           lastTranscript = '';
@@ -162,13 +179,15 @@ export const initVoiceRecognition = (
         const lowerTranscript = transcript.toLowerCase();
         
         if (lowerTranscript.includes("stop") || 
-            lowerTranscript.includes("cancel")) {
+            lowerTranscript.includes("cancel") ||
+            lowerTranscript.includes("nevermind")) {
           isListeningForCommand = false;
           onListeningEnd();
           if (commandTimeout) clearTimeout(commandTimeout);
         } else if (latestResult.isFinal) {
           // This is a final result, send it to the callback
           lastTranscript = transcript;
+          
           // Keep command mode active for a short period to let user continue
           if (commandTimeout) clearTimeout(commandTimeout);
           commandTimeout = setTimeout(() => {
@@ -199,17 +218,36 @@ export const initVoiceRecognition = (
       if (hasErrored) {
         console.log("Recognition ended after error, not restarting automatically");
         hasErrored = false;
+        onListeningEnd(); // Ensure we notify that listening has ended
+        return;
+      }
+      
+      // Limit restart attempts to prevent rapid restart loops
+      if (recognitionRestartCount > 5) {
+        console.log("Too many restart attempts, waiting before trying again");
+        setTimeout(() => {
+          recognitionRestartCount = 0;
+          try {
+            recognition.start();
+            console.log("Voice recognition restarted after cooling period");
+          } catch (error) {
+            console.error("Error restarting speech recognition after cooling period:", error);
+          }
+        }, 5000);
         return;
       }
       
       // Otherwise restart recognition to keep listening for wake word
+      recognitionRestartCount++;
       try {
         setTimeout(() => {
           recognition.start();
           console.log("Voice recognition restarted automatically");
-        }, 100); // Small delay before restarting
+        }, 300); // Small delay before restarting
       } catch (error) {
         console.error("Error restarting speech recognition:", error);
+        hasErrored = true;
+        onListeningEnd();
       }
     };
     
@@ -226,15 +264,27 @@ export const initVoiceRecognition = (
           
         case 'network':
           console.error("Network error occurred during speech recognition");
+          // Network errors are often temporary, so let's try again after a delay
+          setTimeout(() => {
+            try {
+              recognition.start();
+              console.log("Attempting to restart recognition after network error");
+            } catch (e) {
+              console.error("Failed to restart after network error:", e);
+            }
+          }, 3000);
           break;
           
         case 'no-speech':
           console.log("No speech detected");
           // This is a common error that shouldn't stop recognition
+          // It will automatically restart via onend
           break;
           
         default:
           console.error(`Unexpected speech recognition error: ${event.error}`);
+          // Unexpected errors - set hasErrored but let onend restart after proper delay
+          hasErrored = false;
       }
       
       isListeningForCommand = false;
@@ -259,6 +309,7 @@ export const initVoiceRecognition = (
       start: () => {
         try {
           recognition.start();
+          recognitionRestartCount = 0; // Reset counter on manual start
           console.log("Voice recognition started");
         } catch (err) {
           console.error("Failed to start speech recognition:", err);
@@ -273,10 +324,18 @@ export const initVoiceRecognition = (
                     console.log("Voice recognition started after explicit permission");
                   } catch (err2) {
                     console.error("Still failed to start recognition after permission:", err2);
+                    onListeningEnd(); // Ensure we notify that listening is ended
                   }
+                } else {
+                  onListeningEnd(); // Permission denied, so listening has ended
                 }
               })
-              .catch(err => console.error("Error requesting permission:", err));
+              .catch(err => {
+                console.error("Error requesting permission:", err);
+                onListeningEnd();
+              });
+          } else {
+            onListeningEnd();
           }
         }
       },
