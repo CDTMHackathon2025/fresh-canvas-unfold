@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
-import AnimatedAvatar from "@/components/AnimatedAvatar";
+import Avatar3D from "@/components/avatar3D/Avatar3D";
 import ChatMessageList from "@/components/chat/ChatMessageList";
 import MessageInput from "@/components/chat/MessageInput";
 import VoiceIndicators from "@/components/chat/VoiceIndicators";
@@ -42,15 +42,19 @@ const Chat = () => {
   
   // Avatar state
   const [avatarStatus, setAvatarStatus] = useState<"idle" | "listening" | "speaking">("idle");
+  const [avatarEmotion, setAvatarEmotion] = useState<"neutral" | "confident" | "thinking" | "happy">("neutral");
   
   // Update avatar status based on chat state
   useEffect(() => {
     if (isListening || isWaitingForCommand) {
       setAvatarStatus("listening");
+      setAvatarEmotion("thinking");
     } else if (isSpeaking) {
       setAvatarStatus("speaking");
+      setAvatarEmotion("confident");
     } else {
       setAvatarStatus("idle");
+      setAvatarEmotion("neutral");
     }
   }, [isListening, isWaitingForCommand, isSpeaking]);
 
@@ -91,9 +95,13 @@ const Chat = () => {
       <Header activeTab="Hey Trade" onTabChange={() => {}} showTabs={false} />
       
       <main className="flex-1 flex flex-col pt-16 pb-28">
-        {/* Avatar section */}
+        {/* Avatar section - We're replacing AnimatedAvatar with our new Avatar3D */}
         <div className="flex justify-center py-3 sticky top-16 z-10 bg-black/40 backdrop-blur-sm">
-          <AnimatedAvatar status={avatarStatus} size="md" />
+          <Avatar3D 
+            status={avatarStatus} 
+            emotion={avatarEmotion} 
+            size="md" 
+          />
           
           {/* Display speech recognition not supported message */}
           {!isSpeechRecognitionSupported && (
