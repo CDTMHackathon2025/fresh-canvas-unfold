@@ -12,7 +12,6 @@ declare global {
       boxGeometry: ReactThreeFiber.BufferGeometryNode<THREE.BoxGeometry, typeof THREE.BoxGeometry>
       cylinderGeometry: ReactThreeFiber.BufferGeometryNode<THREE.CylinderGeometry, typeof THREE.CylinderGeometry>
       ringGeometry: ReactThreeFiber.BufferGeometryNode<THREE.RingGeometry, typeof THREE.RingGeometry>
-      ellipsoidGeometry: ReactThreeFiber.BufferGeometryNode<THREE.SphereGeometry, typeof THREE.SphereGeometry>
       ellipseCurve: ReactThreeFiber.Node<THREE.EllipseCurve, typeof THREE.EllipseCurve> & {
         asGeometry: boolean,
         extrudeGeometry?: {

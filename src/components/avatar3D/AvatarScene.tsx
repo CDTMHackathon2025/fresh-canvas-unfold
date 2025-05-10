@@ -398,13 +398,13 @@ const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) =
       <group ref={earsRef}>
         {/* Left ear */}
         <mesh position={[1.4, 0.1, 0]} rotation={[0, Math.PI/2, 0]}>
-          <ellipsoidGeometry args={[0.2, 0.4, 0.15]} />
+          <sphereGeometry args={[0.2, 0.4, 0.15]} />
           <meshStandardMaterial color={getSkinTone()} />
         </mesh>
         
         {/* Right ear */}
         <mesh position={[-1.4, 0.1, 0]} rotation={[0, -Math.PI/2, 0]}>
-          <ellipsoidGeometry args={[0.2, 0.4, 0.15]} />
+          <sphereGeometry args={[0.2, 0.4, 0.15]} />
           <meshStandardMaterial color={getSkinTone()} />
         </mesh>
       </group>
