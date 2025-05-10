@@ -39,7 +39,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ searchQuery, favorites, o
       price: 215.72,
       change: "-2.33",
       changePercent: "-1.07",
-      imageUrl: "https://images.unsplash.com/photo-1620413825361-c10b9d99f126?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&q=80",
       type: "stock" as const
     },
     {
@@ -49,7 +49,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ searchQuery, favorites, o
       price: 875.28,
       change: "+12.36",
       changePercent: "+1.43",
-      imageUrl: "https://images.unsplash.com/photo-1563770660941-671a3fac6e62?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&q=80",
       type: "stock" as const
     },
   ];
