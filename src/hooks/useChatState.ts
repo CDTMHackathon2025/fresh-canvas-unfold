@@ -190,7 +190,7 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     }
   };
 
-  // Debug command handler
+  // Debug command handler - fixed to handle type conversions properly
   const handleDebugCommand = (command: string) => {
     const parts = command.split(" ");
     
@@ -224,7 +224,7 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
         const path = parts[2].split('.');
         const value = parts.slice(3).join(' ');
         
-        let target = conversationContext;
+        let target: any = conversationContext;
         for (let i = 0; i < path.length - 1; i++) {
           if (!target[path[i]]) {
             target[path[i]] = {};
@@ -233,14 +233,23 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
         }
         
         // Try to parse as number or boolean, otherwise keep as string
-        let parsedValue = value;
-        if (!isNaN(Number(value))) {
-          parsedValue = Number(value);
-        } else if (value === 'true' || value === 'false') {
+        let parsedValue: string | number | boolean = value;
+        
+        // Convert the value to the appropriate type based on target type
+        const lastKey = path[path.length - 1];
+        const currentValue = target[lastKey];
+        
+        // Check the type of the current value and convert accordingly
+        if (typeof currentValue === 'number') {
+          // Convert to number if current value is a number
+          parsedValue = Number(value) || 0;
+        } else if (typeof currentValue === 'boolean') {
+          // Convert to boolean if current value is a boolean
           parsedValue = value === 'true';
         }
+        // Otherwise keep as string (default)
         
-        target[path[path.length - 1]] = parsedValue;
+        target[lastKey] = parsedValue;
         setConversationContext({...conversationContext});
         
         const debugMessage: Message = {
@@ -251,7 +260,7 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
         };
         
         setMessages(prev => [...prev, debugMessage]);
-      } catch (error) {
+      } catch (error: any) {
         const debugMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
