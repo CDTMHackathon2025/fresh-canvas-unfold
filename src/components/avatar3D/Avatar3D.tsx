@@ -26,7 +26,7 @@ const Avatar3D: React.FC<Avatar3DProps> = ({
 
   useEffect(() => {
     // Update emotion when prop changes
-    setCurrentEmotion(emotion as AvatarEmotion);
+    setCurrentEmotion(emotion);
   }, [emotion]);
 
   return (
