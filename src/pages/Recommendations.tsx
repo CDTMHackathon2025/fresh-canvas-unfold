@@ -94,21 +94,21 @@ const recommendations = [
     ticker: "AAPL",
     price: "178.42",
     change: 1.25,
-    imageUrl: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
   },
   {
     name: "Nvidia Corporation",
     ticker: "NVDA",
     price: "1024.15",
     change: 2.38,
-    imageUrl: "https://images.unsplash.com/photo-1618477462417-c19281597b68?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=200&h=200&q=80"
   },
   {
     name: "Tesla, Inc.",
     ticker: "TSLA",
     price: "182.43",
     change: -0.87,
-    imageUrl: "https://images.unsplash.com/photo-1619389136796-ebf6a39d507c?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=200&h=200&q=80"
   },
   {
     name: "Amazon.com, Inc.",
@@ -126,7 +126,7 @@ const portfolioRecommendations = [
     ticker: "MSFT",
     price: "416.32",
     sector: "Tech",
-    imageUrl: "https://images.unsplash.com/photo-1642053353472-dfc5dcc55e6f?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1633419461186-7d40a38105ec?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80"
   },
   {
     name: "Taiwan Semiconductor",
