@@ -1,3 +1,4 @@
+
 // Voice recognition utility for "Hey Trade" wake word detection
 
 // Browser compatibility check - support Firefox, Safari, Chrome and Edge
@@ -64,6 +65,31 @@ const requestMicrophonePermission = async (): Promise<boolean> => {
   }
 };
 
+// Enhanced wake word detection with improved sensitivity
+const detectWakeWord = (transcript: string): boolean => {
+  const lowerTranscript = transcript.toLowerCase().trim();
+  
+  // Different possible variations of "Hey Trade"
+  const wakeWordVariations = [
+    "hey trade",
+    "hey tray",
+    "hey traid",
+    "heytrade",
+    "hey trayd",
+    "hay trade",
+    "hay tray",
+    "hey trading",
+    "hi trade",
+    "hi tray",
+    "okay trade",
+    "ok trade",
+    "yotrade"
+  ];
+  
+  // Check if any variation is in the transcript
+  return wakeWordVariations.some(variation => lowerTranscript.includes(variation));
+};
+
 // Initialize speech recognition with wake word detection
 export const initVoiceRecognition = (
   onWakeWordDetected: () => void,
@@ -96,10 +122,11 @@ export const initVoiceRecognition = (
   try {
     const recognition = new SpeechRecognition();
     
-    // Configure recognition
+    // Configure recognition with enhanced settings
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3; // Get multiple interpretation alternatives
     
     // Variables to track state
     let isListeningForCommand = false;
@@ -107,17 +134,17 @@ export const initVoiceRecognition = (
     let lastTranscript = '';
     let hasErrored = false;
     
-    // Handle results
+    // Handle results with improved wake word detection
     recognition.onresult = (event: any) => {
       const latestResult = event.results[event.results.length - 1];
       const transcript = latestResult[0].transcript;
 
       console.log("Speech recognized:", transcript);
       
-      // Wake word detection
+      // Wake word detection with enhanced sensitivity
       if (!isListeningForCommand) {
-        const lowerTranscript = transcript.toLowerCase();
-        if (lowerTranscript.includes("hey trade")) {
+        if (detectWakeWord(transcript)) {
+          console.log("Wake word detected in:", transcript);
           isListeningForCommand = true;
           lastTranscript = '';
           onWakeWordDetected();
@@ -166,6 +193,7 @@ export const initVoiceRecognition = (
       }
     };
     
+    // Improved restart handling
     recognition.onend = () => {
       // If this is due to an error, don't restart automatically
       if (hasErrored) {
@@ -176,7 +204,10 @@ export const initVoiceRecognition = (
       
       // Otherwise restart recognition to keep listening for wake word
       try {
-        recognition.start();
+        setTimeout(() => {
+          recognition.start();
+          console.log("Voice recognition restarted automatically");
+        }, 100); // Small delay before restarting
       } catch (error) {
         console.error("Error restarting speech recognition:", error);
       }

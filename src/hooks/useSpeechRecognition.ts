@@ -10,6 +10,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
   const voiceRecognitionRef = useRef<any>(null);
   const hasShownSupportWarning = useRef(false);
+  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check if speech recognition is supported more reliably
@@ -100,8 +101,38 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
           console.error("Error stopping voice recognition:", e);
         }
       }
+      
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
     };
   }, [onSpeechResult]);
+
+  // Implement a function to restart recognition if it crashes or stops
+  const ensureRecognitionIsRunning = () => {
+    if (isSpeechRecognitionSupported && voiceRecognitionRef.current) {
+      try {
+        // First stop any existing instance
+        voiceRecognitionRef.current.stop();
+        
+        // Then start after a short delay
+        restartTimeoutRef.current = setTimeout(() => {
+          voiceRecognitionRef.current.start();
+          console.log("Voice recognition restarted by ensure function");
+        }, 300);
+      } catch (err) {
+        console.error("Error in ensureRecognitionIsRunning:", err);
+      }
+    }
+  };
+
+  // Set up a periodic check to ensure recognition is running
+  useEffect(() => {
+    if (isSpeechRecognitionSupported) {
+      const checkInterval = setInterval(ensureRecognitionIsRunning, 60000); // Check every minute
+      return () => clearInterval(checkInterval);
+    }
+  }, [isSpeechRecognitionSupported]);
 
   const toggleVoiceInput = () => {
     if (!isSpeechRecognitionSupported) return;
@@ -171,6 +202,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     isWaitingForCommand,
     voiceRecognitionRef,
     isSpeechRecognitionSupported,
-    toggleVoiceInput
+    toggleVoiceInput,
+    ensureRecognitionIsRunning
   };
 };

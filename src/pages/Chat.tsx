@@ -31,18 +31,19 @@ const Chat = () => {
     handleSendMessage
   } = useChatState(textToSpeechRef);
   
-  // Initialize speech recognition
+  // Initialize speech recognition with enhanced wake word detection
   const {
     isListening,
     wakeWordDetected,
     isWaitingForCommand,
     isSpeechRecognitionSupported,
-    toggleVoiceInput
+    toggleVoiceInput,
+    ensureRecognitionIsRunning
   } = useSpeechRecognition(handleSendVoiceMessage);
   
   // Avatar state
   const [avatarStatus, setAvatarStatus] = useState<"idle" | "listening" | "speaking">("idle");
-  const [avatarEmotion, setAvatarEmotion] = useState<"neutral" | "confident" | "thinking" | "happy">("neutral");
+  const [avatarEmotion, setAvatarEmotion] = useState<"neutral" | "confident" | "thinking" | "happy" | "surprised" | "concerned">("neutral");
   
   // Update avatar status based on chat state
   useEffect(() => {
@@ -58,6 +59,18 @@ const Chat = () => {
     }
   }, [isListening, isWaitingForCommand, isSpeaking]);
 
+  // Ensure recognition is checked periodically
+  useEffect(() => {
+    const checkRecognitionInterval = setInterval(() => {
+      if (isVoiceActive && !isListening) {
+        console.log("Voice is active but not listening - restarting recognition");
+        ensureRecognitionIsRunning();
+      }
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(checkRecognitionInterval);
+  }, [isVoiceActive, isListening, ensureRecognitionIsRunning]);
+
   // Synchronize voice active state with listening
   useEffect(() => {
     if (isVoiceActive && !isListening) {
@@ -65,7 +78,7 @@ const Chat = () => {
     } else if (!isVoiceActive && isListening) {
       toggleVoiceInput();
     }
-  }, [isVoiceActive, isListening]);
+  }, [isVoiceActive, isListening, toggleVoiceInput]);
 
   // Handle voice toggle with our custom toggle function
   const handleToggleVoice = () => {
@@ -95,7 +108,7 @@ const Chat = () => {
       <Header activeTab="Hey Trade" onTabChange={() => {}} showTabs={false} />
       
       {/* Increased top padding from pt-20 to pt-24 and increased mt-4 to mt-6 */}
-      <main className="flex-1 flex flex-col pt-24 mt-6 pb-28">
+      <main className="flex-1 flex flex-col pt-28 mt-8 pb-28">
         {/* Avatar section with more space */}
         <div className="flex justify-center py-4 sticky top-16 z-10 bg-black/40 backdrop-blur-sm">
           <Avatar3D 

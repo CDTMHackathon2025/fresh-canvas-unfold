@@ -6,7 +6,7 @@ import { createEmotionController, AvatarEmotion } from './EmotionController';
 interface Avatar3DProps {
   status: "idle" | "listening" | "speaking";
   size?: "sm" | "md" | "lg" | "xl";
-  emotion?: "neutral" | "confident" | "thinking" | "happy" | "surprised" | "concerned";
+  emotion?: AvatarEmotion;
 }
 
 const Avatar3D: React.FC<Avatar3DProps> = ({ 
