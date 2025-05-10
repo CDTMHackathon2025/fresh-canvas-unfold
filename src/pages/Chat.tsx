@@ -62,6 +62,20 @@ const Chat = () => {
     }
   }, [isListening, isWaitingForCommand, isSpeaking]);
 
+  // Ensure recognition is running on mount
+  useEffect(() => {
+    console.log("Chat component mounted, checking speech recognition");
+    
+    // Start voice recognition immediately if supported and not already listening
+    if (isSpeechRecognitionSupported && !isListening) {
+      console.log("Initializing voice recognition on mount");
+      toggleVoiceInput();
+      toggleVoice(); // Update UI state
+    }
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Ensure recognition is checked periodically
   useEffect(() => {
     const checkRecognitionInterval = setInterval(() => {
@@ -69,7 +83,7 @@ const Chat = () => {
         console.log("Voice is active but not listening - restarting recognition");
         ensureRecognitionIsRunning();
       }
-    }, 30000); // Check every 30 seconds
+    }, 15000); // Check every 15 seconds
     
     return () => clearInterval(checkRecognitionInterval);
   }, [isVoiceActive, isListening, ensureRecognitionIsRunning]);
@@ -85,10 +99,9 @@ const Chat = () => {
 
   // Handle voice toggle with our custom toggle function
   const handleToggleVoice = () => {
+    console.log("Toggling voice input", { currentState: isVoiceActive });
     toggleVoice();
-    if (!isVoiceActive) {
-      toggleVoiceInput();
-    }
+    toggleVoiceInput();
   };
 
   // Disable voice activation if speech recognition is not supported

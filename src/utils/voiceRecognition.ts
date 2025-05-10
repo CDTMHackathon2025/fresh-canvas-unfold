@@ -1,3 +1,4 @@
+
 // Voice recognition utility for "Hey Trade" wake word detection
 
 // Browser compatibility check - support Firefox, Safari, Chrome and Edge
@@ -67,6 +68,7 @@ const requestMicrophonePermission = async (): Promise<boolean> => {
 // Enhanced wake word detection with improved sensitivity
 const detectWakeWord = (transcript: string): boolean => {
   const lowerTranscript = transcript.toLowerCase().trim();
+  console.log("Checking for wake word in:", lowerTranscript);
   
   // Different possible variations of "Hey Trade"
   const wakeWordVariations = [
@@ -93,7 +95,13 @@ const detectWakeWord = (transcript: string): boolean => {
   ];
   
   // Check if any variation is in the transcript
-  return wakeWordVariations.some(variation => lowerTranscript.includes(variation));
+  for (const variation of wakeWordVariations) {
+    if (lowerTranscript.includes(variation)) {
+      console.log("Wake word detected:", variation);
+      return true;
+    }
+  }
+  return false;
 };
 
 // Initialize speech recognition with wake word detection
@@ -143,6 +151,7 @@ export const initVoiceRecognition = (
     
     // Handle results with improved wake word detection
     recognition.onresult = (event: any) => {
+      console.log("Speech recognition result received", event.results.length);
       const latestResult = event.results[event.results.length - 1];
       const transcript = latestResult[0].transcript;
 
@@ -165,7 +174,6 @@ export const initVoiceRecognition = (
           isListeningForCommand = true;
           lastTranscript = '';
           onWakeWordDetected();
-          onListeningStart();
           
           // Reset after 10 seconds of no activity
           if (commandTimeout) clearTimeout(commandTimeout);
@@ -214,6 +222,7 @@ export const initVoiceRecognition = (
     
     // Improved restart handling
     recognition.onend = () => {
+      console.log("Recognition ended, hasErrored:", hasErrored);
       // If this is due to an error, don't restart automatically
       if (hasErrored) {
         console.log("Recognition ended after error, not restarting automatically");
@@ -311,6 +320,8 @@ export const initVoiceRecognition = (
           recognition.start();
           recognitionRestartCount = 0; // Reset counter on manual start
           console.log("Voice recognition started");
+          // Call onListeningStart to update UI immediately
+          onListeningStart();
         } catch (err) {
           console.error("Failed to start speech recognition:", err);
           
@@ -322,6 +333,7 @@ export const initVoiceRecognition = (
                   try {
                     recognition.start();
                     console.log("Voice recognition started after explicit permission");
+                    onListeningStart();
                   } catch (err2) {
                     console.error("Still failed to start recognition after permission:", err2);
                     onListeningEnd(); // Ensure we notify that listening is ended

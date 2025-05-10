@@ -21,6 +21,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
       (('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window));
     
     setIsSpeechRecognitionSupported(isSupported);
+    console.log("Speech Recognition supported:", isSupported);
     
     // Only show the warning once
     if (!isSupported && !hasShownSupportWarning.current) {
@@ -81,6 +82,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
     }
     
     try {
+      console.log("Initializing voice recognition...");
       // Initialize voice recognition with callbacks
       voiceRecognitionRef.current = initVoiceRecognition(
         // Wake word detected
@@ -138,6 +140,7 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
 
   // Initialize on component mount with permission handling
   useEffect(() => {
+    console.log("useSpeechRecognition effect running...");
     initializeSpeechRecognition();
     
     // Clean up on component unmount
@@ -181,13 +184,15 @@ export const useSpeechRecognition = (onSpeechResult: (transcript: string) => voi
   // Set up a periodic check to ensure recognition is running
   useEffect(() => {
     if (isSpeechRecognitionSupported) {
-      const checkInterval = setInterval(ensureRecognitionIsRunning, 60000); // Check every minute
+      const checkInterval = setInterval(ensureRecognitionIsRunning, 30000); // Check every 30 seconds
       return () => clearInterval(checkInterval);
     }
   }, [isSpeechRecognitionSupported, ensureRecognitionIsRunning]);
 
   // Toggle voice input with proper permission handling
   const toggleVoiceInput = useCallback(async () => {
+    console.log("Toggle voice input called", { isSpeechRecognitionSupported, isListening });
+    
     // If speech recognition isn't supported, show an explanation
     if (!isSpeechRecognitionSupported) {
       toast({
