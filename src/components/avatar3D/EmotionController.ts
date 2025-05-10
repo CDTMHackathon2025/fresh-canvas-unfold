@@ -5,7 +5,8 @@ import { AvatarEmotion, AvatarStatus, EmotionConfig, ExpressionBlendshape } from
 import { generateBlendshapes } from './utils/expressionGenerator';
 import { processText, handleBusinessEvent } from './utils/textProcessor';
 
-export { AvatarEmotion, AvatarStatus } from './types/avatarTypes';
+// Use "export type" for re-exporting types when isolatedModules is enabled
+export type { AvatarEmotion, AvatarStatus } from './types/avatarTypes';
 
 export class EmotionController {
   private currentEmotion: AvatarEmotion = "neutral";
