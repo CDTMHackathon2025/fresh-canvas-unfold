@@ -3,13 +3,14 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
+import { AvatarEmotion } from './EmotionController';
 
 // Placeholder for when we have an actual model
 const PLACEHOLDER_MODEL_URL = '/models/placeholder_avatar.glb'; 
 
 interface Avatar3DProps {
   status: "idle" | "listening" | "speaking";
-  emotion?: "neutral" | "confident" | "thinking" | "happy";
+  emotion?: AvatarEmotion;
 }
 
 // Component that renders the avatar model
@@ -507,7 +508,7 @@ const Lights: React.FC = () => {
 };
 
 // Main avatar scene component
-const AvatarScene: React.FC<Avatar3DProps> = ({ status, emotion }) => {
+const AvatarScene: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) => {
   return (
     <div className="w-full h-full">
       <Canvas 
