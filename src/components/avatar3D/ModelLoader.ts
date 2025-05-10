@@ -1,6 +1,7 @@
 
 // Utility for loading and preparing 3D models for the avatar
 import { Object3D } from 'three';
+import * as THREE from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
 // Types for loaded models

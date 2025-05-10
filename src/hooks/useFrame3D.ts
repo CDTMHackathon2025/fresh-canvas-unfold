@@ -2,6 +2,7 @@
 // Custom hook for animation frames in Three.js/React Three Fiber
 import { useFrame } from "@react-three/fiber";
 import { useRef, useEffect } from "react";
+import * as THREE from 'three';
 
 // Hook for managing animation frames with cleanup
 export const useFrame3D = (callback: (state: any) => void) => {

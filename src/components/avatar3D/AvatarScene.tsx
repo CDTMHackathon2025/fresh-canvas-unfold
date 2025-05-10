@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, useGLTF, useFBX, useAnimations } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Placeholder for when we have an actual model
@@ -13,7 +13,7 @@ interface Avatar3DProps {
 }
 
 // Component that renders the avatar model
-const AvatarModel = ({ status, emotion = "neutral" }: Avatar3DProps) => {
+const AvatarModel: React.FC<Avatar3DProps> = ({ status, emotion = "neutral" }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [animationState, setAnimationState] = useState('idle');
   
@@ -75,7 +75,10 @@ const AvatarModel = ({ status, emotion = "neutral" }: Avatar3DProps) => {
       </mesh>
       
       {/* Simple mouth - will animate when speaking */}
-      <mesh position={[0, -0.3, 1.2]} rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.2 : 0]}>
+      <mesh 
+        position={[0, -0.3, 1.2]} 
+        rotation={[0, 0, status === "speaking" ? Math.sin(Date.now() * 0.01) * 0.2 : 0]}
+      >
         <boxGeometry args={[0.8, 0.2, 0.1]} />
         <meshBasicMaterial color="#d35400" />
       </mesh>
@@ -84,7 +87,7 @@ const AvatarModel = ({ status, emotion = "neutral" }: Avatar3DProps) => {
 };
 
 // Light setup component
-const Lights = () => {
+const Lights: React.FC = () => {
   return (
     <>
       <ambientLight intensity={0.6} />
