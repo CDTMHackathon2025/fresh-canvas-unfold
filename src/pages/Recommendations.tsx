@@ -14,7 +14,7 @@ const Recommendations = () => {
     <div className="pb-20 min-h-screen text-white relative z-10">
       <Header activeTab={activeTab} onTabChange={setActiveTab} showTabs={false} />
       
-      <main className="px-4 mt-16 pb-16">
+      <main className="px-4 mt-24 pb-16"> {/* Changed mt-16 to mt-24 for more top spacing */}
         <div className="flex items-center mb-4">
           <Button 
             variant="ghost" 
