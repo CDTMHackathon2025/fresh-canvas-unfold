@@ -19,6 +19,7 @@ import Goals from "./pages/Goals";
 import Recommendations from "./pages/Recommendations";
 import Analytics from "./pages/Analytics";
 import ViewDetails from "./pages/ViewDetails";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/goals" element={<Goals />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/cash" element={<NotFound />} />
             <Route path="/stock" element={<NotFound />} />
             <Route path="/crypto" element={<NotFound />} />

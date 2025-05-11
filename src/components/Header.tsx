@@ -25,6 +25,10 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTabs = true
     navigate("/space");
   };
   
+  const handleSettingsClick = () => {
+    navigate("/settings");
+  };
+  
   // Check if we should show the back button
   // We want to show it on price-alerts and portfolio pages
   const showBackButton = ["/price-alerts", "/portfolio"].includes(location.pathname);
@@ -99,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTabs = true
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    onClick={() => navigate("/space")}
+                    onClick={handleSettingsClick}
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Account Settings
