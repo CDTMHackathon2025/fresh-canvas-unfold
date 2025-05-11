@@ -155,7 +155,7 @@ export const initVoiceRecognition = (
     
     // Variables to track state
     let isListeningForCommand = false;
-    let commandTimeout: ReturnType<typeof setTimeout> | null = null; // Fixed NodeJS.Timeout to work in browser
+    let commandTimeout: ReturnType<typeof setTimeout> | null = null;
     let lastTranscript = '';
     let fullCommand = ''; // Store the complete command
     let hasErrored = false;
@@ -163,6 +163,7 @@ export const initVoiceRecognition = (
     let isListeningActive = true; // Track if we actually want to be listening
     let isProcessingSpeech = false; // Track if we're currently processing speech
     let accumulatedTranscript = ''; // Accumulate transcript over multiple segments
+    let lastSubmissionTime = 0; // Track when we last submitted to prevent duplicates
     
     // Handle results with improved wake word detection and command accumulation
     recognition.onresult = (event: any) => {
@@ -238,7 +239,7 @@ export const initVoiceRecognition = (
                   fullCommand = accumulatedTranscript;
                   isListeningForCommand = false;
                   isProcessingSpeech = false;
-                  onSpeechResult(fullCommand);
+                  submitCommand(fullCommand);
                 }, 800); // Short delay to see if there's more coming
                 return;
               }
@@ -259,9 +260,9 @@ export const initVoiceRecognition = (
               fullCommand = accumulatedTranscript;
               isListeningForCommand = false;
               isProcessingSpeech = false;
-              onSpeechResult(fullCommand);
+              submitCommand(fullCommand);
             }
-          }, 5000); // Shortened from 10 seconds to 5 seconds to complete command
+          }, 3000); // Reduced from 5 seconds to 3 seconds to complete command faster
         }
       } 
       // Command mode - already listening for a command
@@ -332,8 +333,8 @@ export const initVoiceRecognition = (
                 fullCommand = accumulatedTranscript;
                 isListeningForCommand = false;
                 isProcessingSpeech = false;
-                onSpeechResult(fullCommand);
-              }, 500);
+                submitCommand(fullCommand);
+              }, 300); // Reduced from 500ms to 300ms for faster response
               return;
             }
             
@@ -341,7 +342,7 @@ export const initVoiceRecognition = (
             if (commandTimeout) clearTimeout(commandTimeout);
             
             // Shorter timeout for commands that already have substantial content
-            const timeoutDuration = accumulatedTranscript.length > 20 ? 2000 : 3000;
+            const timeoutDuration = accumulatedTranscript.length > 20 ? 1500 : 2000; // Reduced timeout durations
             
             commandTimeout = setTimeout(() => {
               // Only submit if we have reasonable content
@@ -350,7 +351,7 @@ export const initVoiceRecognition = (
                 fullCommand = accumulatedTranscript;
                 isListeningForCommand = false;
                 isProcessingSpeech = false;
-                onSpeechResult(fullCommand);
+                submitCommand(fullCommand);
               } else {
                 console.log("Command timeout with insufficient content");
                 isListeningForCommand = false;
@@ -367,7 +368,7 @@ export const initVoiceRecognition = (
           
           // Natural pauses should trigger command completion faster
           // if we already have substantial content
-          const timeoutDuration = accumulatedTranscript.length > 15 ? 2000 : 5000;
+          const timeoutDuration = accumulatedTranscript.length > 15 ? 1500 : 3000; // Reduced timeouts
           
           commandTimeout = setTimeout(() => {
             // If we have content when timeout expires, submit it
@@ -376,7 +377,7 @@ export const initVoiceRecognition = (
               fullCommand = accumulatedTranscript;
               isListeningForCommand = false;
               isProcessingSpeech = false;
-              onSpeechResult(fullCommand);
+              submitCommand(fullCommand);
             } else {
               console.log("Command timeout reached without valid content");
               isListeningForCommand = false;
@@ -386,6 +387,32 @@ export const initVoiceRecognition = (
           }, timeoutDuration);
         }
       }
+    };
+    
+    // Helper function to prevent duplicate submissions
+    const submitCommand = (command: string) => {
+      const now = Date.now();
+      // Prevent duplicate submissions within 2 seconds
+      if (now - lastSubmissionTime < 2000) {
+        console.log("Preventing duplicate submission");
+        return;
+      }
+      
+      // Force command state to be reset
+      isListeningForCommand = false;
+      isProcessingSpeech = false;
+      
+      // Update submission time
+      lastSubmissionTime = now;
+      
+      // Actually submit the command
+      console.log("SUBMITTING COMMAND:", command);
+      onSpeechResult(command);
+      
+      // Ensure UI is updated
+      setTimeout(() => {
+        onListeningEnd();
+      }, 100);
     };
     
     // Improved recognition end handling with state management
@@ -407,7 +434,7 @@ export const initVoiceRecognition = (
           if (isListeningForCommand) { // Check if still in command mode
             isListeningForCommand = false;
             isProcessingSpeech = false;
-            onSpeechResult(fullCommand);
+            submitCommand(fullCommand);
           }
         }, 300);
         return;
@@ -526,6 +553,15 @@ export const initVoiceRecognition = (
           // Common and expected, let onend handle restart
           // Important: Do NOT exit command mode on no-speech error!
           hasErrored = false; // Make sure we don't prevent restart
+          
+          // IMPORTANT: If we've been in command mode too long with no speech, finish up
+          if (isListeningForCommand && accumulatedTranscript.length > 2) {
+            console.log("No speech detected but we have accumulated text - submitting");
+            fullCommand = accumulatedTranscript;
+            isListeningForCommand = false;
+            isProcessingSpeech = false;
+            submitCommand(fullCommand);
+          }
           break;
           
         case 'aborted':
@@ -545,7 +581,7 @@ export const initVoiceRecognition = (
         // If we have accumulated text, send it despite the error
         console.log("Sending accumulated speech before handling error:", accumulatedTranscript);
         fullCommand = accumulatedTranscript;
-        onSpeechResult(fullCommand);
+        submitCommand(fullCommand);
       }
       
       if (isListeningForCommand) {
@@ -557,6 +593,12 @@ export const initVoiceRecognition = (
         isProcessingSpeech = false;
         onListeningEnd();
       }
+    };
+    
+    // Add audiostart event to handle recognition starting successfully
+    recognition.onaudiostart = () => {
+      console.log("Audio capture has started");
+      // This confirms the microphone is actually capturing audio
     };
     
     // Interface for controlling speech recognition
@@ -627,7 +669,7 @@ export const initVoiceRecognition = (
           if (accumulatedTranscript && accumulatedTranscript.length > 2) {
             console.log("Sending accumulated speech before stopping:", accumulatedTranscript);
             fullCommand = accumulatedTranscript;
-            onSpeechResult(fullCommand);
+            submitCommand(fullCommand);
           }
           
           recognition.stop();
