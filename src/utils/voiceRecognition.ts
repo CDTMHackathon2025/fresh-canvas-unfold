@@ -149,6 +149,7 @@ export const initVoiceRecognition = (
       console.log(`STATE TRANSITION [${action}]${detail ? ': ' + detail : ''}`, {
         isListeningForCommand,
         isProcessingSpeech,
+        isWakeWordMode,
         hasAccumulatedText: accumulatedTranscript.length > 0
       });
     };
@@ -164,6 +165,7 @@ export const initVoiceRecognition = (
     let isProcessingSpeech = false; // Track if we're currently processing speech
     let accumulatedTranscript = ''; // Accumulate transcript over multiple segments
     let lastSubmissionTime = 0; // Track when we last submitted to prevent duplicates
+    let isWakeWordMode = true; // NEW: Explicitly track if we're just listening for wake word
     
     // Handle results with improved wake word detection and command accumulation
     recognition.onresult = (event: any) => {
@@ -175,7 +177,8 @@ export const initVoiceRecognition = (
       
       console.log("Speech recognition result received", { 
         results: event.results.length, 
-        isListeningForCommand
+        isListeningForCommand,
+        isWakeWordMode // Log our new state
       });
       
       if (!event.results || event.results.length === 0) {
@@ -194,7 +197,7 @@ export const initVoiceRecognition = (
       console.log("Speech recognized:", transcript, "isFinal:", latestResult.isFinal);
       
       // Wake word detection mode
-      if (!isListeningForCommand) {
+      if (isWakeWordMode) {
         // Check for wake word in any of the alternatives
         let wakeWordFound = false;
         for (let i = 0; i < Math.min(latestResult.length, 3); i++) {
@@ -207,6 +210,7 @@ export const initVoiceRecognition = (
         
         if (wakeWordFound || detectWakeWord(transcript)) {
           console.log("Wake word detected in:", transcript);
+          isWakeWordMode = false; // Exit wake word mode
           isListeningForCommand = true;
           lastTranscript = '';
           accumulatedTranscript = ''; // Reset accumulated transcript
@@ -239,6 +243,7 @@ export const initVoiceRecognition = (
                   fullCommand = accumulatedTranscript;
                   isListeningForCommand = false;
                   isProcessingSpeech = false;
+                  isWakeWordMode = true; // FIXED: Return to wake word mode
                   submitCommand(fullCommand);
                 }, 800); // Short delay to see if there's more coming
                 return;
@@ -254,19 +259,21 @@ export const initVoiceRecognition = (
             if (accumulatedTranscript.length <= 2) {
               isListeningForCommand = false;
               isProcessingSpeech = false;
+              isWakeWordMode = true; // FIXED: Return to wake word mode
               onListeningEnd();
             } else {
               // We have content, submit it
               fullCommand = accumulatedTranscript;
               isListeningForCommand = false;
               isProcessingSpeech = false;
+              isWakeWordMode = true; // FIXED: Return to wake word mode
               submitCommand(fullCommand);
             }
-          }, 3000); // Reduced from 5 seconds to 3 seconds to complete command faster
+          }, 7000); // Increased from 3 seconds to 7 seconds to give more time for speech input
         }
       } 
       // Command mode - already listening for a command
-      else {
+      else if (isListeningForCommand) {
         const lowerTranscript = transcript.toLowerCase();
         
         // Check for explicit stop commands
@@ -276,6 +283,7 @@ export const initVoiceRecognition = (
           console.log("Stop command detected");
           isListeningForCommand = false;
           isProcessingSpeech = false;
+          isWakeWordMode = true; // FIXED: Return to wake word mode
           onListeningEnd();
           if (commandTimeout) clearTimeout(commandTimeout);
           return;
@@ -333,16 +341,17 @@ export const initVoiceRecognition = (
                 fullCommand = accumulatedTranscript;
                 isListeningForCommand = false;
                 isProcessingSpeech = false;
+                isWakeWordMode = true; // FIXED: Return to wake word mode
                 submitCommand(fullCommand);
-              }, 300); // Reduced from 500ms to 300ms for faster response
+              }, 1000); // Increased from 300ms to 1000ms to allow for continued speech
               return;
             }
             
             // Reset timeout to give more time for additional speech
             if (commandTimeout) clearTimeout(commandTimeout);
             
-            // Shorter timeout for commands that already have substantial content
-            const timeoutDuration = accumulatedTranscript.length > 20 ? 1500 : 2000; // Reduced timeout durations
+            // Longer timeout for commands to allow more speech input time
+            const timeoutDuration = accumulatedTranscript.length > 20 ? 5000 : 7000; // Increased timeout durations
             
             commandTimeout = setTimeout(() => {
               // Only submit if we have reasonable content
@@ -351,11 +360,13 @@ export const initVoiceRecognition = (
                 fullCommand = accumulatedTranscript;
                 isListeningForCommand = false;
                 isProcessingSpeech = false;
+                isWakeWordMode = true; // FIXED: Return to wake word mode
                 submitCommand(fullCommand);
               } else {
                 console.log("Command timeout with insufficient content");
                 isListeningForCommand = false;
                 isProcessingSpeech = false;
+                isWakeWordMode = true; // FIXED: Return to wake word mode
                 onListeningEnd();
               }
             }, timeoutDuration);
@@ -366,9 +377,9 @@ export const initVoiceRecognition = (
           console.log("Interim result, extending timeout");
           if (commandTimeout) clearTimeout(commandTimeout);
           
-          // Natural pauses should trigger command completion faster
-          // if we already have substantial content
-          const timeoutDuration = accumulatedTranscript.length > 15 ? 1500 : 3000; // Reduced timeouts
+          // Natural pauses should give more time to continue speaking
+          // but still complete eventually if no more input is detected
+          const timeoutDuration = accumulatedTranscript.length > 15 ? 6000 : 8000; // Increased timeouts
           
           commandTimeout = setTimeout(() => {
             // If we have content when timeout expires, submit it
@@ -377,30 +388,37 @@ export const initVoiceRecognition = (
               fullCommand = accumulatedTranscript;
               isListeningForCommand = false;
               isProcessingSpeech = false;
+              isWakeWordMode = true; // FIXED: Return to wake word mode
               submitCommand(fullCommand);
             } else {
               console.log("Command timeout reached without valid content");
               isListeningForCommand = false;
               isProcessingSpeech = false;
+              isWakeWordMode = true; // FIXED: Return to wake word mode
               onListeningEnd();
             }
           }, timeoutDuration);
         }
+      }
+      // FIXED: If we're not in command mode or wake word mode, ignore speech
+      else {
+        console.log("Speech detected but not in active listening mode - ignoring");
       }
     };
     
     // Helper function to prevent duplicate submissions
     const submitCommand = (command: string) => {
       const now = Date.now();
-      // Prevent duplicate submissions within 2 seconds
-      if (now - lastSubmissionTime < 2000) {
+      // Prevent duplicate submissions within 1.5 seconds
+      if (now - lastSubmissionTime < 1500) {
         console.log("Preventing duplicate submission");
         return;
       }
       
-      // Force command state to be reset
+      // Force all states to be reset correctly
       isListeningForCommand = false;
       isProcessingSpeech = false;
+      isWakeWordMode = true; // FIXED: Always return to wake word mode after submission
       
       // Update submission time
       lastSubmissionTime = now;
@@ -422,6 +440,7 @@ export const initVoiceRecognition = (
         isListeningActive,
         isListeningForCommand,
         isProcessingSpeech,
+        isWakeWordMode, // Log our new state
         accumulatedTranscript
       });
       
@@ -434,16 +453,17 @@ export const initVoiceRecognition = (
           if (isListeningForCommand) { // Check if still in command mode
             isListeningForCommand = false;
             isProcessingSpeech = false;
+            isWakeWordMode = true; // FIXED: Return to wake word mode
             submitCommand(fullCommand);
           }
         }, 300);
         return;
       }
       
-      // Still in command mode but not enough content
-      if (isListeningForCommand) {
-        console.log("Still in command mode but recognition ended - preserving command state");
-        // Don't reset command mode, just restart recognition to continue listening
+      // FIXED: Ensure we're in wake word mode if recognition ends
+      if (!isWakeWordMode) {
+        isWakeWordMode = true;
+        console.log("Resetting to wake word mode after recognition ended");
       }
       
       // Don't restart if we had an error or if listening is deactivated
@@ -488,6 +508,7 @@ export const initVoiceRecognition = (
               // Log additional info about command state before restart
               console.log("Restarting recognition with state:", {
                 isListeningForCommand,
+                isWakeWordMode,
                 accumulatedTranscript,
                 isProcessingSpeech
               });
@@ -511,6 +532,32 @@ export const initVoiceRecognition = (
             }
           }
         }, 300); // Small delay before restarting
+      }
+    };
+    
+    // Add a specific handler for no-speech timeout
+    recognition.onnomatch = (event: any) => {
+      console.log("No match for speech input - continuing to listen");
+      // Don't stop listening - this helps with longer sentences
+      if (isListeningForCommand && accumulatedTranscript.length > 0) {
+        // Extended timeout on no match to give more time for speech input
+        if (commandTimeout) clearTimeout(commandTimeout);
+        commandTimeout = setTimeout(() => {
+          if (accumulatedTranscript.length > 2) {
+            console.log("No more matches - submitting accumulated text");
+            fullCommand = accumulatedTranscript;
+            isListeningForCommand = false;
+            isProcessingSpeech = false;
+            isWakeWordMode = true; // FIXED: Return to wake word mode
+            submitCommand(fullCommand);
+          } else {
+            // FIXED: Return to wake word mode if we don't have enough text
+            isListeningForCommand = false;
+            isProcessingSpeech = false;
+            isWakeWordMode = true;
+            onListeningEnd();
+          }
+        }, 8000); // Long timeout for sentence completion
       }
     };
     
@@ -555,12 +602,32 @@ export const initVoiceRecognition = (
           hasErrored = false; // Make sure we don't prevent restart
           
           // IMPORTANT: If we've been in command mode too long with no speech, finish up
-          if (isListeningForCommand && accumulatedTranscript.length > 2) {
-            console.log("No speech detected but we have accumulated text - submitting");
+          // BUT only if we have substantial content already
+          if (isListeningForCommand && accumulatedTranscript.length > 10) {
+            console.log("No speech detected but we have substantial text - submitting");
             fullCommand = accumulatedTranscript;
             isListeningForCommand = false;
             isProcessingSpeech = false;
+            isWakeWordMode = true; // FIXED: Return to wake word mode
             submitCommand(fullCommand);
+          } else if (isListeningForCommand) {
+            // Set a longer timeout for continuing to listen
+            console.log("No speech detected but continuing to listen for more input");
+            if (commandTimeout) clearTimeout(commandTimeout);
+            commandTimeout = setTimeout(() => {
+              if (accumulatedTranscript.length > 2) {
+                fullCommand = accumulatedTranscript;
+                isListeningForCommand = false;
+                isProcessingSpeech = false;
+                isWakeWordMode = true; // FIXED: Return to wake word mode
+                submitCommand(fullCommand);
+              } else {
+                isListeningForCommand = false;
+                isProcessingSpeech = false;
+                isWakeWordMode = true; // FIXED: Return to wake word mode
+                onListeningEnd();
+              }
+            }, 6000); // Give more time for user to continue their sentence
           }
           break;
           
@@ -586,6 +653,7 @@ export const initVoiceRecognition = (
       
       if (isListeningForCommand) {
         isListeningForCommand = false;
+        isWakeWordMode = true; // FIXED: Always return to wake word mode
         if (commandTimeout) clearTimeout(commandTimeout);
       }
       
@@ -609,6 +677,7 @@ export const initVoiceRecognition = (
           isListeningActive = true;
           recognitionRestartCount = 0;
           isListeningForCommand = false;
+          isWakeWordMode = true; // FIXED: Start in wake word mode
           hasErrored = false;
           lastTranscript = '';
           accumulatedTranscript = '';
@@ -620,7 +689,7 @@ export const initVoiceRecognition = (
           }
           
           recognition.start();
-          console.log("Voice recognition started successfully");
+          console.log("Voice recognition started successfully in wake word mode");
           onListeningStart();
         } catch (err) {
           console.error("Failed to start speech recognition:", err);
@@ -660,6 +729,7 @@ export const initVoiceRecognition = (
           // Mark as inactive before stopping
           isListeningActive = false;
           isListeningForCommand = false;
+          isWakeWordMode = true; // FIXED: Reset to wake word mode when stopped
           if (commandTimeout) {
             clearTimeout(commandTimeout);
             commandTimeout = null;
