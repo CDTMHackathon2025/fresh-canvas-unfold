@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sendMessageToOpenAI } from "@/services/openaiService";
@@ -17,8 +16,7 @@ interface Message {
   timestamp: Date;
 }
 
-// Replace the hardcoded API key with an imported value
-// The API key should be properly managed by the environment
+// Use environment variable API key, but let the service handle fallback
 const API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
 export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {

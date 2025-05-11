@@ -37,13 +37,19 @@ const FALLBACK_MESSAGES = [
   "Due to API limitations, I'll answer based on my core knowledge rather than making an external query.",
 ];
 
+// Default API key as fallback if environment variable is not set
+const DEFAULT_API_KEY = "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";
+
 export const sendMessageToOpenAI = async (
   message: string, 
   apiKey: string,
   systemPrompt?: string
 ): Promise<string> => {
+  // Use default API key if provided apiKey is empty
+  const effectiveApiKey = apiKey || DEFAULT_API_KEY;
+  
   // Validate API key
-  if (!apiKey) {
+  if (!effectiveApiKey) {
     throw new Error("OpenAI API key is not configured");
   }
 
@@ -56,7 +62,7 @@ export const sendMessageToOpenAI = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${effectiveApiKey}`
       },
       body: JSON.stringify({
         model: 'gpt-4o',
