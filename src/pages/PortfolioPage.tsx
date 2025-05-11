@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -91,8 +92,8 @@ const PortfolioPage = () => {
     <>
       <Header activeTab="Portfolio" onTabChange={() => {}} showTabs={false} />
       
-      {/* Added pt-16 for header spacing, keeping pb-20 for bottom nav */}
-      <main className="container max-w-md mx-auto px-4 pt-16 pb-20">
+      {/* Added pt-24 instead of pt-16 for more top spacing */}
+      <main className="container max-w-md mx-auto px-4 pt-24 pb-20">
         <div className="space-y-6 animate-fade-in text-white">
           <div className="mb-6">
             <h1 className="text-2xl font-bold mb-4">Your Portfolio</h1>
