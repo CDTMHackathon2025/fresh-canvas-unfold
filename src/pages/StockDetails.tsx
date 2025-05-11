@@ -359,7 +359,7 @@ const StockDetails = () => {
             </div>
             
             <Card className="p-4 h-[300px] bg-black border border-gray-700">
-              <ChartContainer config={{}} className="h-full">
+              <div className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={performanceData[activeTimeframe as keyof typeof performanceData]} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
@@ -391,7 +391,7 @@ const StockDetails = () => {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </ChartContainer>
+              </div>
             </Card>
           </div>
         </section>
@@ -454,7 +454,7 @@ const StockDetails = () => {
             
             <TabsContent value="revenue" className="mt-0">
               <Card className="p-4 h-[250px] bg-black border border-gray-700">
-                <ChartContainer config={{}} className="h-full">
+                <div className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={financialData.revenue} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
@@ -471,13 +471,13 @@ const StockDetails = () => {
                       <Bar dataKey="value" fill="#666" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </ChartContainer>
+                </div>
               </Card>
             </TabsContent>
             
             <TabsContent value="earnings" className="mt-0">
               <Card className="p-4 h-[250px] bg-black border border-gray-700">
-                <ChartContainer config={{}} className="h-full">
+                <div className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={financialData.earnings} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
@@ -494,7 +494,7 @@ const StockDetails = () => {
                       <Bar dataKey="value" fill="#666" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </ChartContainer>
+                </div>
               </Card>
             </TabsContent>
           </Tabs>
