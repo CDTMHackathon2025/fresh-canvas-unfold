@@ -48,11 +48,8 @@ export const sendMessageToOpenAI = async (
   // Use default API key if provided apiKey is empty
   const effectiveApiKey = apiKey || DEFAULT_API_KEY;
   
-  // Validate API key
-  if (!effectiveApiKey) {
-    throw new Error("OpenAI API key is not configured");
-  }
-
+  console.log("OpenAI Service using key:", effectiveApiKey ? "Key available" : "No key available");
+  
   try {
     const defaultPrompt = "You are 'Hey Trade', a friendly AI assistant with visual presence. You have a virtual face that animates as you speak. You specialize in financial advice but can discuss any topic. Keep your responses concise and engaging as if having a face-to-face conversation. Use simple language and avoid very long explanations.";
     
@@ -92,7 +89,7 @@ export const sendMessageToOpenAI = async (
     }
 
     const data = await response.json() as OpenAITextResponse;
-    console.log("OpenAI API response:", data);
+    console.log("OpenAI API response received successfully");
     
     // Extract the text response from the structured API response
     if (data.choices && data.choices.length > 0 && 

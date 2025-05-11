@@ -156,10 +156,7 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
     const responseComponents = generateModularResponseComponents(updatedContext, messageText);
 
     try {
-      // Check if API key is available
-      if (!API_KEY) {
-        throw new Error("OpenAI API key is not configured");
-      }
+      console.log("Sending to OpenAI with API key:", API_KEY ? "API key provided" : "Using fallback key");
       
       const response = await sendMessageToOpenAI(messageText, API_KEY, systemPrompt);
       
@@ -203,35 +200,26 @@ export const useChatState = (textToSpeechRef: React.MutableRefObject<any>) => {
       
       // Show more specific error for missing API key
       let errorMessage = "I'm having trouble connecting to my knowledge base right now.";
-      if (error.message === "OpenAI API key is not configured") {
-        errorMessage = "OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your environment variables.";
-        toast({
-          title: "API Key Missing",
-          description: "OpenAI API key is not configured.",
-          variant: "destructive",
-          duration: 5000,
-        });
-      } else {
-        // Even if there's an error, provide a fallback response
-        const fallbackResponse = "I'm having trouble connecting to my knowledge base right now. Let me share what I know about financial topics. Feel free to ask about investing, stocks, ETFs, bonds, or portfolio management.";
-        
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: fallbackResponse,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Still show an error toast to inform the user
-        toast({
-          title: "Connection Issue",
-          description: "Using offline mode due to connection issues.",
-          variant: "default",
-          duration: 3000,
-        });
-      }
+      
+      // Provide fallback response even if there's an error
+      const fallbackResponse = "I'm having trouble connecting to my knowledge base right now. Let me share what I know about financial topics. Feel free to ask about investing, stocks, ETFs, bonds, or portfolio management.";
+      
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: fallbackResponse,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      // Show an error toast to inform the user
+      toast({
+        title: "Connection Issue",
+        description: "Using offline mode due to connection issues.",
+        variant: "default",
+        duration: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
