@@ -25,9 +25,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     >
       {message.role === 'assistant' && (
         <div className="mr-2 flex-shrink-0 mt-1">
-          <Avatar className="h-6 w-6">
-            <AvatarImage src="/placeholder.svg" alt="Hey Trade" />
-            <AvatarFallback className="bg-blue-600 text-white text-xs">HT</AvatarFallback>
+          <Avatar className="h-6 w-6 bg-blue-900/30 ring-1 ring-blue-400/30">
+            <AvatarImage src="/placeholder.svg" alt="Hey Trade" className="opacity-70" />
+            <AvatarFallback className="bg-blue-600/50 text-blue-100 text-xs border border-blue-400/20 backdrop-blur-sm">HT</AvatarFallback>
           </Avatar>
         </div>
       )}
