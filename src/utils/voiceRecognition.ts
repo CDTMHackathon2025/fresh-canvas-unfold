@@ -144,6 +144,15 @@ export const initVoiceRecognition = (
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 3; // Balance between accuracy and performance
     
+    // Add helper function to log state transitions for debugging
+    const logStateTransition = (action: string, detail: string = '') => {
+      console.log(`STATE TRANSITION [${action}]${detail ? ': ' + detail : ''}`, {
+        isListeningForCommand,
+        isProcessingSpeech,
+        hasAccumulatedText: accumulatedTranscript.length > 0
+      });
+    };
+    
     // Variables to track state
     let isListeningForCommand = false;
     let commandTimeout: ReturnType<typeof setTimeout> | null = null; // Fixed NodeJS.Timeout to work in browser
@@ -204,13 +213,35 @@ export const initVoiceRecognition = (
           onWakeWordDetected();
           isProcessingSpeech = true;
           
+          // Filter out the wake word from initial transcript for better command capture
+          let initialCommandText = transcript;
+          const wakeWordVariations = ["hey trade", "hey tray", "trade", "hey traid", "heytrade", "hi trade"];
+          for (const wakeWord of wakeWordVariations) {
+            initialCommandText = initialCommandText.replace(new RegExp(wakeWord, 'i'), '').trim();
+          }
+          
+          // If there's remaining text after the wake word, start accumulating it
+          if (initialCommandText.length > 0) {
+            accumulatedTranscript = initialCommandText;
+            console.log("Initial command content detected:", initialCommandText);
+          }
+          
           // Reset after timeout if no further input received
           if (commandTimeout) clearTimeout(commandTimeout);
           commandTimeout = setTimeout(() => {
             console.log("Command timeout reached with no further input");
-            isListeningForCommand = false;
-            isProcessingSpeech = false;
-            onListeningEnd();
+            // Only end if we don't have significant accumulated text
+            if (accumulatedTranscript.length <= 2) {
+              isListeningForCommand = false;
+              isProcessingSpeech = false;
+              onListeningEnd();
+            } else {
+              // We have content, submit it
+              fullCommand = accumulatedTranscript;
+              isListeningForCommand = false;
+              isProcessingSpeech = false;
+              onSpeechResult(fullCommand);
+            }
           }, 10000); // 10 seconds to complete command
         }
       } 
@@ -308,10 +339,21 @@ export const initVoiceRecognition = (
       if (isListeningForCommand && accumulatedTranscript.length > 2) {
         console.log("Recognition ended with content - submitting:", accumulatedTranscript);
         fullCommand = accumulatedTranscript;
-        isListeningForCommand = false;
-        isProcessingSpeech = false;
-        onSpeechResult(fullCommand);
+        // Delay clearing listening state to prevent race conditions with onresult events
+        setTimeout(() => {
+          if (isListeningForCommand) { // Check if still in command mode
+            isListeningForCommand = false;
+            isProcessingSpeech = false;
+            onSpeechResult(fullCommand);
+          }
+        }, 300);
         return;
+      }
+      
+      // Still in command mode but not enough content
+      if (isListeningForCommand) {
+        console.log("Still in command mode but recognition ended - preserving command state");
+        // Don't reset command mode, just restart recognition to continue listening
       }
       
       // Don't restart if we had an error or if listening is deactivated
@@ -353,8 +395,22 @@ export const initVoiceRecognition = (
         setTimeout(() => {
           if (isListeningActive) {
             try {
+              // Log additional info about command state before restart
+              console.log("Restarting recognition with state:", {
+                isListeningForCommand,
+                accumulatedTranscript,
+                isProcessingSpeech
+              });
+              
               recognition.start();
               console.log("Recognition restarted automatically");
+              
+              // If we were in command mode, make sure UI reflects this
+              if (isListeningForCommand && !isProcessingSpeech) {
+                isProcessingSpeech = true;
+                // Signal that we're still processing commands
+                onWakeWordDetected(); 
+              }
             } catch (error) {
               console.error("Error restarting recognition:", error);
               hasErrored = true;
@@ -388,6 +444,12 @@ export const initVoiceRecognition = (
               try {
                 recognition.start();
                 console.log("Attempting restart after network error");
+                
+                // Preserve command mode state through network errors
+                if (isListeningForCommand && !isProcessingSpeech) {
+                  isProcessingSpeech = true;
+                  onWakeWordDetected();
+                }
               } catch (e) {
                 console.error("Failed to restart after network error:", e);
                 hasErrored = true;
@@ -399,16 +461,19 @@ export const initVoiceRecognition = (
         case 'no-speech':
           console.log("No speech detected - this is normal");
           // Common and expected, let onend handle restart
+          // Important: Do NOT exit command mode on no-speech error!
+          hasErrored = false; // Make sure we don't prevent restart
           break;
           
         case 'aborted':
           console.log("Recognition aborted - this is normal for stop/start");
           // This happens during normal stop/start cycles
+          hasErrored = false; // Make sure we don't prevent restart
           break;
           
         default:
           console.error(`Unexpected recognition error: ${event.error}`);
-          // Allow restart but track error state
+          // Allow restart but don't count minor errors as fatal
           hasErrored = false;
       }
       
