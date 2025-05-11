@@ -224,6 +224,25 @@ export const initVoiceRecognition = (
           if (initialCommandText.length > 0) {
             accumulatedTranscript = initialCommandText;
             console.log("Initial command content detected:", initialCommandText);
+            
+            // Check for quick complete commands (wake word plus complete command)
+            if (initialCommandText.length > 10) {
+              // Look for natural ending in the command
+              const endsWithPunctuation = /[.!?]$/.test(initialCommandText);
+              
+              // Immediate command submission for commands that appear complete
+              if (endsWithPunctuation || latestResult.isFinal) {
+                console.log("Immediate command completion detected");
+                if (commandTimeout) clearTimeout(commandTimeout);
+                commandTimeout = setTimeout(() => {
+                  fullCommand = accumulatedTranscript;
+                  isListeningForCommand = false;
+                  isProcessingSpeech = false;
+                  onSpeechResult(fullCommand);
+                }, 800); // Short delay to see if there's more coming
+                return;
+              }
+            }
           }
           
           // Reset after timeout if no further input received
@@ -242,7 +261,7 @@ export const initVoiceRecognition = (
               isProcessingSpeech = false;
               onSpeechResult(fullCommand);
             }
-          }, 10000); // 10 seconds to complete command
+          }, 5000); // Shortened from 10 seconds to 5 seconds to complete command
         }
       } 
       // Command mode - already listening for a command
@@ -283,8 +302,47 @@ export const initVoiceRecognition = (
             
             console.log("Accumulated transcript so far:", accumulatedTranscript);
             
+            // Check for natural command completion phrases
+            const completionPhrases = [
+              "thank you", "thanks", "that's all", "that is all", 
+              "please", "go ahead", "submit", "send", "do it",
+              "that's it", "that is it", "got it", "done", "over"
+            ];
+            
+            let shouldCompleteCommand = false;
+            for (const phrase of completionPhrases) {
+              if (cleanedTranscript.toLowerCase().includes(phrase) || 
+                  accumulatedTranscript.toLowerCase().endsWith(phrase)) {
+                console.log("Command completion phrase detected:", phrase);
+                shouldCompleteCommand = true;
+                break;
+              }
+            }
+            
+            // Also check for natural ending (complete sentence with pause)
+            const endsWithPunctuation = /[.!?]$/.test(cleanedTranscript.trim());
+            const pauseAfterSentence = latestResult.isFinal && endsWithPunctuation;
+            
+            // Detect natural pause after a reasonable-length command
+            if ((pauseAfterSentence && accumulatedTranscript.length > 10) || shouldCompleteCommand) {
+              console.log("Natural command completion detected - submitting:", accumulatedTranscript);
+              // Small delay to catch any other final results
+              clearTimeout(commandTimeout);
+              commandTimeout = setTimeout(() => {
+                fullCommand = accumulatedTranscript;
+                isListeningForCommand = false;
+                isProcessingSpeech = false;
+                onSpeechResult(fullCommand);
+              }, 500);
+              return;
+            }
+            
             // Reset timeout to give more time for additional speech
             if (commandTimeout) clearTimeout(commandTimeout);
+            
+            // Shorter timeout for commands that already have substantial content
+            const timeoutDuration = accumulatedTranscript.length > 20 ? 2000 : 3000;
+            
             commandTimeout = setTimeout(() => {
               // Only submit if we have reasonable content
               if (accumulatedTranscript.length > 2) {
@@ -299,13 +357,18 @@ export const initVoiceRecognition = (
                 isProcessingSpeech = false;
                 onListeningEnd();
               }
-            }, 3000); // 3 second timeout after last speech
+            }, timeoutDuration);
           }
         } 
         // Still speaking - extend the timeout
         else if (transcript.trim().length > 0) {
           console.log("Interim result, extending timeout");
           if (commandTimeout) clearTimeout(commandTimeout);
+          
+          // Natural pauses should trigger command completion faster
+          // if we already have substantial content
+          const timeoutDuration = accumulatedTranscript.length > 15 ? 2000 : 5000;
+          
           commandTimeout = setTimeout(() => {
             // If we have content when timeout expires, submit it
             if (accumulatedTranscript.length > 2) {
@@ -320,7 +383,7 @@ export const initVoiceRecognition = (
               isProcessingSpeech = false;
               onListeningEnd();
             }
-          }, 5000); // 5 seconds for ongoing speech
+          }, timeoutDuration);
         }
       }
     };
